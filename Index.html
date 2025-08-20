@@ -18,32 +18,28 @@
         const DRAW_START_HOUR = 9;
         const DRAW_END_HOUR = 21;
 
-        // Application state management.
         let appState = {
-            status: 'LOADING', // States: 'LOADING', 'READY', 'ERROR'
+            status: 'LOADING',
             message: '',
             isAuthenticated: false
         };
 
-        // --- Core Application Bootstrap ---
         window.onload = async () => {
             try {
-                // Display initial loading state
                 updateUI();
 
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
                 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-                if (!firebaseConfig) {
+                if (!firebaseConfigString) {
                     throw new Error("Firebase configuration is missing.");
                 }
 
-                // Initialize Firebase services
+                const firebaseConfig = JSON.parse(firebaseConfigString);
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Await authentication state to be ready
                 await new Promise((resolve, reject) => {
                     const unsubscribe = onAuthStateChanged(auth, async (user) => {
                         unsubscribe();
@@ -51,7 +47,6 @@
                             appState.isAuthenticated = true;
                             resolve();
                         } else {
-                            // Attempt custom token sign-in first, then anonymous
                             try {
                                 if (initialAuthToken) {
                                     await signInWithCustomToken(auth, initialAuthToken);
@@ -67,7 +62,6 @@
                     });
                 });
 
-                // Set application state to ready and initialize UI
                 appState.status = 'READY';
                 initUIListeners();
                 updateLiveDraws();
@@ -82,7 +76,6 @@
             }
         };
         
-        // --- UI Rendering Logic based on App State ---
         function updateUI() {
             const mainContent = document.getElementById('main-content');
             const loadingScreen = document.getElementById('loading-screen');
@@ -107,7 +100,6 @@
             }
         }
 
-        // --- Core UI and Data Logic ---
         function initUIListeners() {
             document.getElementById('lottery-tab').addEventListener('click', () => showTab('lottery'));
             document.getElementById('history-tab').addEventListener('click', () => {
@@ -248,7 +240,6 @@
             }
         }
 
-        // --- Admin Panel Logic ---
         function handleAdminLogin() {
             const passwordInput = document.getElementById('admin-password-input');
             const loginStatus = document.getElementById('login-status');
