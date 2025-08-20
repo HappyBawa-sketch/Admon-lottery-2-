@@ -1,798 +1,502 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admon Lottery</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <style>
-        /* Base styles with a deep, dramatic radial gradient */
-        body {
-            font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at center, #1a022a 0%, #08001a 100%);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            color: #f0f2f5;
-        }
+import React, { useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { getFirestore, doc, onSnapshot, setDoc, updateDoc, collection, getDocs, getDoc } from 'firebase/firestore';
 
-        /* Main container with sleek glass and glowing border */
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: rgba(25, 5, 50, 0.7);
-            backdrop-filter: blur(25px);
-            box-shadow: 0 0 50px rgba(255, 0, 127, 0.3), 0 0 30px rgba(100, 20, 255, 0.2);
-            border-radius: 40px;
-            overflow: hidden;
-            margin: 30px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            animation: fadeIn 1s ease-in-out;
-        }
+/**
+ * The main application component. It serves as the root of the component tree,
+ * handling global state, Firebase initialization, and routing between different views.
+ */
+const App = () => {
+    // --- STATE MANAGEMENT ---
+    // Manages the active tab for the UI, driving conditional rendering.
+    const [activeTab, setActiveTab] = useState('lottery-tab');
+    // Stores the latest draw results for the live view.
+    const [drawResults, setDrawResults] = useState(null);
+    // Stores the countdown timer string.
+    const [countdown, setCountdown] = useState('');
+    // Stores the current date and time string.
+    const [currentTime, setCurrentTime] = useState('');
+    // Manages the authentication state for the admin panel.
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    // Stores the full history data fetched from Firestore.
+    const [historyData, setHistoryData] = useState({});
+    // Manages the loading state for data fetches.
+    const [isLoading, setIsLoading] = useState(true);
+    // Stores any critical application errors.
+    const [error, setError] = useState(null);
+    // Tracks if Firebase authentication has completed its initial check.
+    const [isAuthReady, setIsAuthReady] = useState(false);
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(50px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Tab styling with a glowing active state */
-        .tab-content {
-            display: none;
-            padding: 40px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-        
-        .nav-tab {
-            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            position: relative;
-            font-weight: 700;
-            z-index: 1;
-            font-size: 1.2rem;
-            color: #a0aec0;
-        }
-        
-        .nav-tab.active {
-            color: #fff;
-            background: #2b0b4d;
-            border-bottom: 5px solid #ff1493; /* Electric Pink */
-            text-shadow: 0 0 15px #ff1493;
-            transform: scale(1.05);
-        }
-        
-        .nav-tab:not(.active) {
-            background-color: #1e063a;
-        }
-
-        /* Lottery result balls - now with a sexy, glowing effect */
-        .result-box {
-            font-family: 'Inter', sans-serif;
-            font-size: 4rem;
-            font-weight: 900;
-            background: radial-gradient(circle, #ffc04d 0%, #ff8c00 100%); /* Fiery gradient */
-            color: #333;
-            width: 160px;
-            height: 160px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%; /* Circle */
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.8), 0 15px 40px rgba(0, 0, 0, 0.5);
-            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.4s ease-in-out;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-            animation: pulseGlow 2.5s infinite alternate;
-        }
-        
-        .result-box.animating {
-            animation: drawIn 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-        }
-        
-        @keyframes drawIn {
-            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-            80% { transform: scale(1.1) rotate(20deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        
-        @keyframes pulseGlow {
-            from { box-shadow: 0 0 15px rgba(255, 140, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.4); }
-            to { box-shadow: 0 0 35px rgba(255, 140, 0, 1), 0 20px 50px rgba(0, 0, 0, 0.7); }
-        }
-        
-        /* Loading spinner animation */
-        .loading-spinner {
-            border: 6px solid rgba(255, 255, 255, 0.1);
-            border-top: 6px solid #ff1493;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            animation: spin 1s linear infinite;
-            margin: auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Table and form element styling */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 20px;
-            border: 1px solid #3e2a5f;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-        }
-        
-        .button-primary {
-            background: linear-gradient(90deg, #ff1493, #8a2be2);
-            color: white;
-            font-weight: bold;
-            padding: 18px 35px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            border: none;
-            cursor: pointer;
-        }
-        .button-primary:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px #ff1493;
-        }
-
-        .text-accent-pink {
-            color: #ff1493;
-        }
-        
-        /* Real-time date and time display with glowing effect */
-        #datetime {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #d1d5db;
-            text-align: right;
-            margin-bottom: 2rem;
-            transition: color 0.3s;
-            text-shadow: 0 0 8px #ff1493;
-        }
-        @media (min-width: 768px) {
-            #datetime {
-                font-size: 1.8rem;
+    // --- CONFIG & CONSTANTS ---
+    const ADMIN_PASSWORD = "lottoditto";
+    const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
+    const DRAW_INTERVAL_MINUTES = 15;
+    const DRAW_START_HOUR = 9; // 9 AM
+    const DRAW_END_HOUR = 21;  // 9 PM
+    
+    // --- FIREBASE INITIALIZATION AND AUTHENTICATION LOGIC ---
+    // This effect runs only once on component mount to set up Firebase.
+    useEffect(() => {
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            
+            if (!firebaseConfig) {
+                setError("Configuration Error: Firebase configuration is missing.");
+                setIsLoading(false);
+                return;
             }
+            
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            // onAuthStateChanged is the most reliable way to know when auth is complete.
+            const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    console.log("Firebase signed in successfully.");
+                    setIsAuthReady(true);
+                    // Begin listening for live draw data after successful authentication.
+                    listenForLiveDraws(db);
+                } else {
+                    console.error("Authentication failed. App will be non-functional.");
+                    setError("Authentication Failed: The application could not connect to the database.");
+                    setIsAuthReady(true);
+                    setIsLoading(false);
+                }
+            });
+
+            // Attempt to sign in. The onAuthStateChanged listener will handle the result.
+            const signIn = async () => {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.error("Initial sign-in failed:", e);
+                    await signInAnonymously(auth);
+                }
+            };
+            signIn();
+
+            return () => unsubscribeAuth();
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            setError(`Initialization Error: ${e.message}`);
+            setIsLoading(false);
         }
+    }, []);
+
+    // --- LIVE DRAW AND COUNTDOWN LOGIC ---
+    // This effect handles the live timer and countdown display.
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const now = new Date();
+            updateCountdown(now);
+            updateDateTime(now);
+        }, 1000);
+        return () => clearInterval(intervalId);
+    }, []);
+
+    const updateDateTime = (now) => {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        setCurrentTime(now.toLocaleDateString('en-US', options));
+    };
+
+    const updateCountdown = (now) => {
+        const currentHours = now.getHours();
+        if (currentHours < DRAW_START_HOUR) {
+            setCountdown(`Draws begin at ${DRAW_START_HOUR}:00 AM.`);
+            return;
+        } else if (currentHours >= DRAW_END_HOUR) {
+            setCountdown(`Draws for today have ended.`);
+            return;
+        }
+
+        const currentMinutes = now.getMinutes();
+        const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
+        const nextDrawTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextDrawMinute, 0);
+
+        if (nextDrawTime.getHours() > DRAW_END_HOUR) {
+            setCountdown(`Draws for today have ended.`);
+            return;
+        }
+
+        const timeDiff = nextDrawTime.getTime() - now.getTime();
+        const minutes = Math.floor(timeDiff / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        setCountdown(`Next draw in: ${minutes}m ${seconds}s`);
+    };
+
+    /**
+     * Sets up a real-time listener for today's lottery results.
+     * @param {object} db - The Firestore database instance.
+     */
+    const listenForLiveDraws = (db) => {
+        if (!isAuthReady) return; // Guard clause to prevent listening before auth is ready.
         
-        input, select {
-            background: #1e063a;
-            border: 1px solid #4a2d6b;
-            color: #f0f2f5;
-            padding: 12px 20px;
-            border-radius: 10px;
-            transition: all 0.2s;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #ff1493;
-            box-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
-        }
+        const today = new Date().toISOString().slice(0, 10);
+        const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
+        
+        const unsubscribe = onSnapshot(todayDocRef, (docSnap) => {
+            setIsLoading(false);
+            if (docSnap.exists() && docSnap.data().draws) {
+                const draws = docSnap.data().draws;
+                if (Object.keys(draws).length > 0) {
+                    const lastDrawTime = Object.keys(draws).sort().pop();
+                    setDrawResults({ time: lastDrawTime, numbers: draws[lastDrawTime] });
+                } else {
+                    setDrawResults(null);
+                }
+            } else {
+                setDrawResults(null);
+            }
+        }, (err) => {
+            console.error("Error fetching live draw data:", err);
+            setError("Data Fetch Error: Failed to load live draw data. Please check your network and Firebase rules.");
+            setIsLoading(false);
+        });
 
-    </style>
-</head>
-<body>
+        // The return function acts as a cleanup mechanism for the listener.
+        return unsubscribe;
+    };
 
-    <div class="container">
-        <!-- Main Tabs -->
-        <div class="flex border-b border-gray-800 bg-gray-900">
-            <button id="lottery-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="lottery-tab-content">Live Draw</button>
-            <button id="history-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="history-tab-content">History</button>
-            <button id="admin-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="admin-tab-content">Admin</button>
-        </div>
-
-        <!-- Lottery Tab Content -->
-        <div id="lottery-tab-content" class="tab-content text-gray-200">
-            <div id="datetime" class="font-semibold text-gray-400 text-right"></div>
-            <h2 class="text-5xl font-extrabold text-center text-white mb-10">LIVE DRAW</h2>
-            <div id="today-results-body" class="mb-8 min-h-[250px] flex items-center justify-center">
-                <div id="initial-message" class="text-center text-gray-500 text-sm">Initializing app...</div>
-                <div id="loading-spinner" class="loading-spinner hidden"></div>
-                <div id="results-display" class="hidden">
-                    <!-- Results will be dynamically inserted here -->
+    return (
+        <div className="bg-gray-100 min-h-screen p-4 sm:p-8 flex justify-center items-start font-inter text-gray-800">
+            <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 sm:p-10 text-center">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-wide">ADMON LOTTERY</h1>
                 </div>
-            </div>
+                
+                <div className="flex bg-white border-b border-gray-200">
+                    <TabButton name="Live Draw" tabId="lottery-tab" activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton name="History" tabId="history-tab" activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton name="Admin" tabId="admin-tab" activeTab={activeTab} setActiveTab={setActiveTab} />
+                </div>
 
-            <div class="text-center mt-12">
-                <span id="countdown" class="text-gray-300 text-2xl md:text-4xl font-semibold"></span>
-                <button id="play-sound-btn" class="mt-6 button-primary hidden">Play Sound</button>
+                {/* Conditional rendering based on active tab and loading/error states */}
+                {error ? (
+                    <ErrorDisplay message={error} />
+                ) : (
+                    <>
+                        {activeTab === 'lottery-tab' && <LiveDraw isLoading={isLoading} results={drawResults} countdown={countdown} currentTime={currentTime} />}
+                        {activeTab === 'history-tab' && <History isAuthReady={isAuthReady} />}
+                        {activeTab === 'admin-tab' && <AdminPanel isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} password={ADMIN_PASSWORD} isAuthReady={isAuthReady} />}
+                    </>
+                )}
             </div>
         </div>
+    );
+};
 
-        <!-- History Tab Content -->
-        <div id="history-tab-content" class="tab-content text-gray-200">
-            <h2 class="text-4xl font-extrabold text-center text-white mb-8">Lottery History</h2>
-            <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
-                <select id="year-filter" class="px-5 py-3 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                    <!-- Year options will be dynamically inserted here -->
-                </select>
-                <input type="date" id="date-filter" class="px-5 py-3 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
+// --- SUB-COMPONENTS ---
+
+/** A reusable button component for tab navigation. */
+const TabButton = ({ name, tabId, activeTab, setActiveTab }) => (
+    <button
+        onClick={() => setActiveTab(tabId)}
+        className={`flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200 ${
+            activeTab === tabId ? 'bg-indigo-50 text-indigo-700 border-b-4 border-indigo-500' : 'text-gray-600 hover:bg-gray-50'
+        }`}
+    >
+        {name}
+    </button>
+);
+
+/** Displays a clear, formatted error message to the user. */
+const ErrorDisplay = ({ message }) => (
+    <div className="p-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative text-center" role="alert">
+            <strong className="font-bold">Application Error!</strong>
+            <p className="block sm:inline mt-2">{message}</p>
+        </div>
+    </div>
+);
+
+/**
+ * Component for the Live Draw tab. It renders the current results,
+ * countdown, and time based on its props.
+ */
+const LiveDraw = ({ isLoading, results, countdown, currentTime }) => {
+    return (
+        <div className="p-8">
+            <div className="text-right text-gray-500 text-sm mb-4">{currentTime}</div>
+            <div className="text-center min-h-[200px] flex flex-col items-center justify-center">
+                {isLoading ? (
+                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 animate-spin"></div>
+                ) : results ? (
+                    <>
+                        <p className="text-gray-500 text-sm mb-2">Last draw at {results.time}</p>
+                        <div className="flex justify-center items-center space-x-6">
+                            {results.numbers.map((num, index) => (
+                                <div key={index} className="bg-blue-600 text-white font-bold text-3xl w-24 h-24 rounded-full flex items-center justify-center shadow-xl">
+                                    {num}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <p className="text-gray-400 text-lg">No draws yet today. Stay tuned!</p>
+                )}
             </div>
+            <div className="text-center mt-8">
+                <p className="text-2xl font-bold text-gray-600">{countdown}</p>
+            </div>
+        </div>
+    );
+};
 
-            <div id="history-results" class="table-container">
-                <table class="min-w-full bg-gray-900 rounded-lg overflow-hidden">
-                    <thead class="bg-gray-800 border-b border-gray-700">
+/**
+ * Component for the History tab. Fetches and displays past draw data.
+ */
+const History = ({ isAuthReady }) => {
+    const [historyData, setHistoryData] = useState({});
+    const [filteredHistory, setFilteredHistory] = useState([]);
+    const [years, setYears] = useState([]);
+    const [selectedYear, setSelectedYear] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Effect to fetch history data when the component is first mounted.
+    useEffect(() => {
+        if (isAuthReady) {
+            loadHistory();
+        }
+    }, [isAuthReady]);
+
+    // Effect to filter history whenever the data or filters change.
+    useEffect(() => {
+        let dates = Object.keys(historyData).sort().reverse();
+        if (selectedYear) {
+            dates = dates.filter(date => date.startsWith(selectedYear));
+        }
+        if (selectedDate) {
+            dates = dates.filter(date => date === selectedDate);
+        }
+        setFilteredHistory(dates);
+    }, [historyData, selectedYear, selectedDate]);
+
+    const loadHistory = async () => {
+        if (!isAuthReady) return; // Prevent execution before auth is ready.
+        setIsLoading(true);
+        const db = getFirestore();
+        const historyCollectionRef = collection(db, 'lottery-draws');
+        try {
+            const querySnapshot = await getDocs(historyCollectionRef);
+            const fetchedData = {};
+            const yearSet = new Set();
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data && data.draws) {
+                    fetchedData[doc.id] = data.draws;
+                    yearSet.add(doc.id.substring(0, 4));
+                }
+            });
+            setHistoryData(fetchedData);
+            setYears(Array.from(yearSet).sort().reverse());
+        } catch (err) {
+            console.error("Error loading history:", err);
+            // Can add a more specific error state here if needed.
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="p-8">
+            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">Lottery History</h2>
+            <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                <select value={selectedYear} onChange={e => {setSelectedYear(e.target.value); setSelectedDate('');}} className="w-full md:w-auto p-2 border rounded-lg">
+                    <option value="">All Years</option>
+                    {years.map(year => <option key={year} value={year}>{year}</option>)}
+                </select>
+                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full md:w-auto p-2 border rounded-lg" />
+                <button onClick={loadHistory} className="w-full md:w-auto bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors">Refresh History</button>
+            </div>
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-400">Time</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-400">Draw</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Draw</th>
                         </tr>
                     </thead>
-                    <tbody id="history-table-body" class="divide-y divide-gray-700">
-                        <tr>
-                            <td colspan="2" class="p-6 text-center text-gray-500">Select a year or date to view history.</td>
-                        </tr>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {isLoading ? (
+                            <tr><td colSpan="3" className="p-6 text-center text-gray-400">Loading history...</td></tr>
+                        ) : (
+                            filteredHistory.length > 0 ? (
+                                filteredHistory.map(date => 
+                                    Object.keys(historyData[date]).sort().map(time => (
+                                        <tr key={`${date}-${time}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{date}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{time}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex space-x-2">
+                                                    {historyData[date][time].map((num, idx) => (
+                                                        <span key={idx} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">{num}</span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )
+                            ) : (
+                                <tr><td colSpan="3" className="p-6 text-center text-gray-400">No history found for this selection.</td></tr>
+                            )
+                        )}
                     </tbody>
                 </table>
             </div>
         </div>
+    );
+};
 
-        <!-- Admin Panel Tab Content -->
-        <div id="admin-tab-content" class="tab-content text-gray-200">
-            <h2 class="text-4xl font-extrabold text-center text-white mb-8">Admin Panel</h2>
-            <div id="login-form">
-                <p class="text-center text-sm text-gray-400 mb-6">Please enter the admin password to continue.</p>
-                <input type="password" id="admin-password" placeholder="Enter Password" class="w-full px-5 py-3 mb-6 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                <button id="login-btn" class="w-full button-primary">Login</button>
-                <div id="login-status" class="mt-4 text-center text-red-500"></div>
-            </div>
-
-            <div id="admin-panel" class="hidden">
-                <p class="text-sm text-gray-400 mb-4">Enter the new lottery results below. The draw time will automatically be set to the current 15-minute interval.</p>
-                <div class="flex flex-col space-y-4 mb-4">
-                    <input type="date" id="draw-date" class="px-5 py-3 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                    <input type="time" id="draw-time" class="px-5 py-3 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                </div>
-                <div class="flex space-x-2 md:space-x-4 mb-4">
-                    <input type="number" id="result-a-input" placeholder="Result 1" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                    <input type="number" id="result-b-input" placeholder="Result 2" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                    <input type="number" id="result-c-input" placeholder="Result 3" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
-                </div>
-                <button id="start-draw-btn" class="w-full button-primary bg-green-600 hover:bg-green-700">Save Draw</button>
-                <button id="random-results-btn" class="w-full bg-yellow-500 text-white font-bold py-4 px-4 rounded-lg mt-3 hover:bg-yellow-600 transition-colors duration-200">Generate Random</button>
-                <p id="save-status" class="text-center text-sm mt-3"></p>
-                <p id="export-btn" class="mt-6 text-blue-400 text-sm font-semibold cursor-pointer text-center hover:underline">Export all history to CSV</p>
-                <p id="logout-btn" class="mt-4 text-red-400 text-sm font-semibold cursor-pointer text-center hover:underline">Logout</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Message box container -->
-    <div id="message-box" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
-        <div class="bg-gray-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-gray-700">
-            <h3 id="message-title" class="text-xl font-bold mb-3 text-white"></h3>
-            <p id="message-text" class="text-gray-300 mb-6"></p>
-            <div class="flex justify-end space-x-3">
-                <button id="message-cancel" class="bg-gray-700 text-gray-200 px-5 py-3 rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
-                <button id="message-confirm" class="bg-purple-600 text-white px-5 py-3 rounded-lg hover:bg-purple-700 transition-colors">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, onSnapshot, setDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-        // --- ADMIN PASSWORD (CHANGE THIS) ---
-        const ADMIN_PASSWORD = "lottoditto";
-
-        // --- FIREBASE SETUP ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let app, db, auth;
-        let authReady = false;
-
-        // --- GLOBAL VARIABLES ---
-        const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
-        const DRAW_INTERVAL_MINUTES = 15;
-        const DRAW_START_HOUR = 9; // 9 AM
-        const DRAW_END_HOUR = 21;  // 9 PM
-
-        let countdownInterval;
-        let datetimeInterval;
-        let allHistoryData = {};
-        let isAuthenticated = false;
-
-        // HTML Elements
-        const elements = {
-            tabs: document.querySelectorAll('.nav-tab'),
-            lotteryTab: document.getElementById('lottery-tab'),
-            historyTab: document.getElementById('history-tab'),
-            adminTab: document.getElementById('admin-tab'),
-            countdown: document.getElementById('countdown'),
-            datetimeDisplay: document.getElementById('datetime'),
-            resultsDisplay: document.getElementById('results-display'),
-            loadingSpinner: document.getElementById('loading-spinner'),
-            todayResultsBody: document.getElementById('today-results-body'),
-            initialMessage: document.getElementById('initial-message'),
-            drawDateInput: document.getElementById('draw-date'),
-            drawTimeInput: document.getElementById('draw-time'),
-            resultAInput: document.getElementById('result-a-input'),
-            resultBInput: document.getElementById('result-b-input'),
-            resultCInput: document.getElementById('result-c-input'),
-            startDrawBtn: document.getElementById('start-draw-btn'),
-            randomResultsBtn: document.getElementById('random-results-btn'),
-            historyTableBody: document.getElementById('history-table-body'),
-            adminPasswordInput: document.getElementById('admin-password'),
-            loginBtn: document.getElementById('login-btn'),
-            loginForm: document.getElementById('login-form'),
-            adminPanel: document.getElementById('admin-panel'),
-            loginStatus: document.getElementById('login-status'),
-            exportBtn: document.getElementById('export-btn'),
-            yearFilter: document.getElementById('year-filter'),
-            dateFilter: document.getElementById('date-filter'),
-            messageBox: document.getElementById('message-box'),
-            messageTitle: document.getElementById('message-title'),
-            messageText: document.getElementById('message-text'),
-            messageConfirm: document.getElementById('message-confirm'),
-            messageCancel: document.getElementById('message-cancel'),
-            saveStatus: document.getElementById('save-status'),
-            logoutBtn: document.getElementById('logout-btn'),
-            playSoundBtn: document.getElementById('play-sound-btn')
-        };
-        
-        // Sound effect for the draw
-        const drawSound = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "sine" },
-            envelope: {
-                attack: 0.05,
-                decay: 0.2,
-                sustain: 0.2,
-                release: 0.5
-            }
-        }).toDestination();
-        const drawSoundNotes = ["E4", "G4", "B4", "E5"]; // A more "winning" chord
-
-        function playDrawSound() {
-            try {
-                drawSound.triggerAttackRelease(drawSoundNotes, "4n");
-            } catch (e) {
-                console.warn("Audio playback failed:", e);
-            }
-        }
-
-        // Tab switching logic
-        function switchTab(tabId) {
-            elements.tabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.getElementById(tabId).classList.add('active');
-            
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(document.getElementById(tabId).dataset.tab).classList.add('active');
-            
-            // Special actions for each tab
-            if (tabId === 'history-tab' && authReady) {
-                loadHistoryData();
-            }
-        }
-        
-        elements.tabs.forEach(tab => {
-            tab.addEventListener('click', () => switchTab(tab.id));
-        });
-        
-        // Set initial active tab
-        switchTab('lottery-tab');
-
-        // Function to show custom message box
-        function showMessageBox(title, message, showCancel = false) {
-            elements.messageTitle.textContent = title;
-            elements.messageText.textContent = message;
-            elements.messageCancel.classList.toggle('hidden', !showCancel);
-            elements.messageBox.classList.remove('hidden');
-            return new Promise(resolve => {
-                const onConfirm = () => {
-                    elements.messageBox.classList.add('hidden');
-                    elements.messageConfirm.removeEventListener('click', onConfirm);
-                    elements.messageCancel.removeEventListener('click', onCancel);
-                    resolve(true);
-                };
-                const onCancel = () => {
-                    elements.messageBox.classList.add('hidden');
-                    elements.messageConfirm.removeEventListener('click', onConfirm);
-                    elements.messageCancel.removeEventListener('click', onCancel);
-                    resolve(false);
-                };
-                elements.messageConfirm.addEventListener('click', onConfirm);
-                elements.messageCancel.addEventListener('click', onCancel);
-            });
-        }
-
-        // Helper function to get the current 15-minute draw time slot
-        function getDrawTimeSlot(date) {
-            const hours = date.getHours();
-            const minutes = date.getMinutes();
-            if (hours < DRAW_START_HOUR || hours >= DRAW_END_HOUR) {
-                return null; // Outside of drawing hours
-            }
-            const nextDrawMinute = Math.floor(minutes / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
-            const drawTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, nextDrawMinute, 0);
-            return drawTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }
-
-        // Countdown Timer
-        function updateCountdown() {
-            const now = new Date();
-            const currentHours = now.getHours();
-            
-            if (currentHours < DRAW_START_HOUR) {
-                elements.countdown.textContent = `Draws begin at 9:00 AM.`;
-                return;
-            } else if (currentHours >= DRAW_END_HOUR) {
-                elements.countdown.textContent = `Draws for today have ended.`;
-                return;
-            }
-
-            const currentMinutes = now.getMinutes();
-            const currentSeconds = now.getSeconds();
-            const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
-            const nextDrawTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextDrawMinute, 0);
-            
-            if (nextDrawTime.getHours() > DRAW_END_HOUR) {
-                 elements.countdown.textContent = `Draws for today have ended.`;
-                 return;
-            }
-
-            const timeDiff = nextDrawTime.getTime() - now.getTime();
-            if (timeDiff <= 0) {
-                elements.countdown.textContent = `A new draw is happening now.`;
-                return;
-            }
-
-            const minutes = Math.floor(timeDiff / (1000 * 60));
-            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-            elements.countdown.textContent = `Next draw in: ${minutes}m ${seconds}s`;
-        }
-
-        // Live Date and Time
-        function updateDateTime() {
-            const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-            elements.datetimeDisplay.textContent = now.toLocaleDateString('en-US', options);
-        }
-        
-        // Firebase Listeners
-        async function startFirestoreListeners() {
-            // Show loading spinner
-            elements.initialMessage.classList.add('hidden');
-            elements.loadingSpinner.classList.remove('hidden');
-            
-            const today = new Date().toISOString().slice(0, 10);
-            const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
-            
-            const unsubscribe = onSnapshot(todayDocRef, (doc) => {
-                elements.loadingSpinner.classList.add('hidden');
-                elements.resultsDisplay.classList.remove('hidden');
-                
-                const now = new Date();
-                const currentHours = now.getHours();
-                
-                if (doc.exists()) {
-                    const data = doc.data();
-                    const draws = data.draws;
-                    if (draws && Object.keys(draws).length > 0) {
-                        const lastDrawTime = Object.keys(draws).sort().pop();
-                        const lastDrawNumbers = draws[lastDrawTime];
-                        displayTodayResults(lastDrawTime, lastDrawNumbers);
-                    } else {
-                        elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
-                    }
-                } else {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
-                }
-                
-                // If draw hours are over, stop the countdown
-                if (currentHours >= DRAW_END_HOUR) {
-                    clearInterval(countdownInterval);
-                    elements.countdown.textContent = `Draws for today have ended.`;
-                }
-            }, (error) => {
-                console.error("Error fetching today's document:", error);
-                elements.loadingSpinner.classList.add('hidden');
-                elements.resultsDisplay.classList.add('hidden');
-                if (error.code === 'permission-denied') {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Connection failed. Please ensure your Firebase rules are public. <br><br> Go to Firebase Console > Firestore > Rules and set 'allow read, write: if true;' for the 'lottery-draws' collection.</p>`;
-                } else {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Error connecting to database. Please check your internet connection.</p>`;
-                }
-            });
-        }
-
-        function displayTodayResults(time, numbers) {
-            elements.todayResultsBody.innerHTML = ''; // Clear previous results
-            const container = document.createElement('div');
-            container.classList.add('bg-gray-800', 'p-8', 'rounded-xl', 'shadow-xl', 'w-full', 'md:w-auto', 'transform', 'transition-all', 'duration-500');
-            container.innerHTML = `
-                <p class="text-xl font-bold mb-6 text-white text-center">Draw (${time})</p>
-                <div class="flex flex-col md:flex-row justify-center items-center space-y-6 md:space-y-0 md:space-x-8">
-                </div>
-            `;
-            elements.todayResultsBody.appendChild(container);
-            const numbersContainer = container.querySelector('div');
-
-            playDrawSound();
-            numbers.forEach((num, index) => {
-                setTimeout(() => {
-                    const numberBox = document.createElement('div');
-                    numberBox.classList.add('flex', 'flex-col', 'items-center');
-                    numberBox.innerHTML = `
-                        <span class="text-2xl md:text-4xl font-extrabold text-accent-pink mb-2">${String.fromCharCode(65 + index)}</span>
-                        <div class="result-box animating">
-                            <span>${num}</span>
-                        </div>
-                    `;
-                    numbersContainer.appendChild(numberBox);
-                }, index * 300); // 300ms delay for each number
-            });
-        }
-
-        // Admin Panel Functions
-        elements.loginBtn.addEventListener('click', () => {
-            if (elements.adminPasswordInput.value === ADMIN_PASSWORD) {
-                isAuthenticated = true;
-                elements.loginForm.classList.add('hidden');
-                elements.adminPanel.classList.remove('hidden');
-                elements.loginStatus.textContent = '';
-                setupAdminPanel();
-            } else {
-                elements.loginStatus.textContent = 'Incorrect password.';
-            }
-        });
-
-        elements.logoutBtn.addEventListener('click', () => {
-            isAuthenticated = false;
-            elements.loginForm.classList.remove('hidden');
-            elements.adminPanel.classList.add('hidden');
-            elements.adminPasswordInput.value = '';
-            elements.loginStatus.textContent = '';
-        });
-
-        elements.randomResultsBtn.addEventListener('click', () => {
-            const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
-            elements.resultAInput.value = randomNumbers[0];
-            elements.resultBInput.value = randomNumbers[1];
-            elements.resultCInput.value = randomNumbers[2];
-        });
-
-        elements.startDrawBtn.addEventListener('click', async () => {
-            if (!isAuthenticated) return;
-
-            const date = elements.drawDateInput.value;
-            const time = elements.drawTimeInput.value;
-            const resultA = elements.resultAInput.value;
-            const resultB = elements.resultBInput.value;
-            const resultC = elements.resultCInput.value;
-
-            if (!date || !time || !resultA || !resultB || !resultC) {
-                showMessageBox('Error', 'Please fill in all fields.');
-                return;
-            }
-
-            const confirm = await showMessageBox('Confirm Save', `Are you sure you want to save the draw for ${date} at ${time}?`, true);
-            if (!confirm) return;
-
-            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, date);
-            
-            try {
-                const docSnap = await getDoc(docRef);
-                const drawData = {
-                    [time]: [resultA, resultB, resultC]
-                };
-
-                if (docSnap.exists()) {
-                    await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
-                } else {
-                    await setDoc(docRef, { draws: drawData });
-                }
-                elements.saveStatus.textContent = 'Draw saved successfully!';
-                elements.saveStatus.classList.add('text-green-500');
-                elements.saveStatus.classList.remove('text-red-500');
-            } catch (error) {
-                console.error("Error saving draw:", error);
-                elements.saveStatus.textContent = 'Error saving draw.';
-                elements.saveStatus.classList.add('text-red-500');
-                elements.saveStatus.classList.remove('text-green-500');
-            }
-        });
-        
-        elements.exportBtn.addEventListener('click', async () => {
-            elements.saveStatus.textContent = 'Exporting...';
-            elements.saveStatus.classList.add('text-gray-400');
-            elements.saveStatus.classList.remove('text-green-500', 'text-red-500');
-            
-            try {
-                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
-                const querySnapshot = await getDocs(historyCollectionRef);
-                
-                let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
-                querySnapshot.forEach((doc) => {
-                    const date = doc.id;
-                    const data = doc.data();
-                    if (data && data.draws) {
-                        const draws = data.draws;
-                        Object.keys(draws).sort().forEach(time => {
-                            const numbers = draws[time];
-                            csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
-                        });
-                    }
-                });
-                
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "lottery-history.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                elements.saveStatus.textContent = 'Export successful!';
-                elements.saveStatus.classList.add('text-green-500');
-                elements.saveStatus.classList.remove('text-red-500');
-                
-            } catch (error) {
-                console.error("Error exporting data:", error);
-                elements.saveStatus.textContent = 'Export failed.';
-                elements.saveStatus.classList.add('text-red-500');
-                elements.saveStatus.classList.remove('text-green-500');
-            }
-        });
-
-        // History Tab Functions
-        elements.dateFilter.addEventListener('change', (e) => filterHistory());
-        elements.yearFilter.addEventListener('change', (e) => {
-            elements.dateFilter.value = ''; // Reset date filter
-            filterHistory();
-        });
-
-        async function loadHistoryData() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Loading history...</td></tr>';
-            
-            try {
-                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
-                const querySnapshot = await getDocs(historyCollectionRef);
-                allHistoryData = {};
-                const years = new Set();
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data && data.draws) {
-                        allHistoryData[doc.id] = data.draws;
-                        years.add(doc.id.substring(0, 4));
-                    }
-                });
-                
-                populateYearFilter(Array.from(years).sort().reverse());
-                filterHistory();
-            } catch (error) {
-                console.error("Error fetching history data:", error);
-                if (error.code === 'permission-denied') {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
-                } else {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
-                }
-            }
-        }
-
-        function populateYearFilter(years) {
-            let optionsHtml = '<option value="">All Years</option>';
-            years.forEach(year => {
-                optionsHtml += `<option value="${year}">${year}</option>`;
-            });
-            elements.yearFilter.innerHTML = optionsHtml;
-        }
-
-        function filterHistory() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Filtering history...</td></tr>';
-            
-            const selectedDate = elements.dateFilter.value;
-            const selectedYear = elements.yearFilter.value;
-
-            let filteredDates = Object.keys(allHistoryData).sort().reverse();
-            
-            if (selectedYear) {
-                filteredDates = filteredDates.filter(date => date.startsWith(selectedYear));
-            }
-            if (selectedDate) {
-                filteredDates = filteredDates.filter(date => date === selectedDate);
-            }
-
-            let html = '';
-            if (filteredDates.length === 0) {
-                html = `<tr><td colspan="2" class="p-6 text-center text-gray-500">No history found for this selection.</td></tr>`;
-            } else {
-                filteredDates.forEach(date => {
-                    const draws = allHistoryData[date];
-                    const times = Object.keys(draws).sort();
-                    times.forEach(time => {
-                        const numbers = draws[time];
-                        html += `
-                            <tr>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-400">${time}</td>
-                                <td class="px-6 py-3">
-                                    <div class="flex space-x-3">
-                                        ${numbers.map(num => `<span class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-gray-200 text-sm font-bold">${num}</span>`).join('')}
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                });
-            }
-            elements.historyTableBody.innerHTML = html;
-        }
-
-        // Set up the current date and time in the admin panel
-        function setupAdminPanel() {
+/**
+ * Component for the Admin Panel. Manages its own login and data submission state.
+ */
+const AdminPanel = ({ isAuthenticated, setIsAuthenticated, password, isAuthReady }) => {
+    const [loginStatus, setLoginStatus] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
+    const [drawDate, setDrawDate] = useState('');
+    const [drawTime, setDrawTime] = useState('');
+    const [resultA, setResultA] = useState('');
+    const [resultB, setResultB] = useState('');
+    const [resultC, setResultC] = useState('');
+    const [saveStatus, setSaveStatus] = useState('');
+    
+    // Set default date/time on mount or when switching to authenticated view.
+    useEffect(() => {
+        if (isAuthenticated) {
             const now = new Date();
             const year = now.getFullYear();
             const month = (now.getMonth() + 1).toString().padStart(2, '0');
             const day = now.getDate().toString().padStart(2, '0');
             const hours = now.getHours().toString().padStart(2, '0');
             const minutes = now.getMinutes().toString().padStart(2, '0');
-            
-            elements.drawDateInput.value = `${year}-${month}-${day}`;
-            elements.drawTimeInput.value = `${hours}:${minutes}`;
+            setDrawDate(`${year}-${month}-${day}`);
+            setDrawTime(`${hours}:${minutes}`);
         }
-        
-        // Initial setup
-        async function initializeApp() {
-            try {
-                // Check for required environment variables
-                if (!firebaseConfig || !initialAuthToken) {
-                    console.error("Firebase environment variables are missing.");
-                    elements.initialMessage.textContent = "Initialization failed: Firebase settings are missing.";
-                    return;
-                }
-                
-                // Show initial message while everything loads
-                elements.initialMessage.classList.remove('hidden');
+    }, [isAuthenticated]);
 
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+    const handleAdminLogin = () => {
+        if (adminPassword === password) {
+            setIsAuthenticated(true);
+            setLoginStatus('');
+        } else {
+            setLoginStatus('Incorrect password.');
+        }
+    };
 
-                // Sign in with the provided token and wait for it
-                await signInWithCustomToken(auth, initialAuthToken);
-                authReady = true;
-                console.log("Firebase signed in successfully.");
+    const handleGenerateRandom = () => {
+        const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
+        setResultA(randomNumbers[0]);
+        setResultB(randomNumbers[1]);
+        setResultC(randomNumbers[2]);
+    };
 
-                // Start listeners and app functionality only after Firebase is ready
-                startFirestoreListeners();
-                
-                // Start countdown timer and datetime display
-                clearInterval(countdownInterval);
-                clearInterval(datetimeInterval);
-                updateCountdown();
-                updateDateTime();
-                countdownInterval = setInterval(updateCountdown, 1000);
-                datetimeInterval = setInterval(updateDateTime, 1000);
+    const handleSaveDraw = async () => {
+        if (!isAuthReady) {
+            setSaveStatus("Error: Not authenticated. Please reload the page.");
+            return;
+        }
 
-            } catch (error) {
-                console.error("Failed to initialize Firebase:", error);
-                elements.initialMessage.classList.add('hidden');
-                elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Initialization failed: ${error.message}</p>`;
+        if (!drawDate || !drawTime || !resultA || !resultB || !resultC) {
+            setSaveStatus('Please fill in all fields.');
+            return;
+        }
+
+        const db = getFirestore();
+        const docRef = doc(db, 'lottery-draws', drawDate);
+        const drawData = { [drawTime]: [resultA, resultB, resultC] };
+
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
+            } else {
+                await setDoc(docRef, { draws: drawData });
             }
+            setSaveStatus('Draw saved successfully!');
+            setTimeout(() => setSaveStatus(''), 3000);
+        } catch (e) {
+            console.error("Error saving draw:", e);
+            setSaveStatus('Error saving draw.');
         }
+    };
 
-        // Start the application
-        initializeApp();
-    </script>
-</body>
-</html>
+    const handleExportCsv = async () => {
+        if (!isAuthReady) {
+            setSaveStatus("Error: Not authenticated. Please reload the page.");
+            return;
+        }
+        setSaveStatus('Exporting...');
+        const db = getFirestore();
+        const historyCollectionRef = collection(db, 'lottery-draws');
+        try {
+            const querySnapshot = await getDocs(historyCollectionRef);
+            let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
+            querySnapshot.forEach((doc) => {
+                const date = doc.id;
+                const data = doc.data();
+                if (data && data.draws) {
+                    Object.keys(data.draws).sort().forEach(time => {
+                        const numbers = data.draws[time];
+                        csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
+                    });
+                }
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "lottery-history.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setSaveStatus('Export successful!');
+            setTimeout(() => setSaveStatus(''), 3000);
+        } catch (e) {
+            console.error("Error exporting data:", e);
+            setSaveStatus('Export failed.');
+        }
+    };
+
+    return (
+        <div className="p-8">
+            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">Admin Panel</h2>
+            {!isAuthenticated ? (
+                <div className="space-y-4 max-w-sm mx-auto">
+                    <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="Enter Password" className="w-full p-3 border rounded-lg" />
+                    <button onClick={handleAdminLogin} className="w-full bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700 transition-colors">Login</button>
+                    {loginStatus && <p className="mt-2 text-center text-red-500">{loginStatus}</p>}
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    <div className="flex space-x-4">
+                        <input type="date" value={drawDate} onChange={e => setDrawDate(e.target.value)} className="w-1/2 p-3 border rounded-lg" />
+                        <input type="time" value={drawTime} onChange={e => setDrawTime(e.target.value)} className="w-1/2 p-3 border rounded-lg" />
+                    </div>
+                    <div className="flex space-x-2">
+                        <input type="number" value={resultA} onChange={e => setResultA(e.target.value)} placeholder="Result 1" className="w-1/3 p-3 text-center border rounded-lg" />
+                        <input type="number" value={resultB} onChange={e => setResultB(e.target.value)} placeholder="Result 2" className="w-1/3 p-3 text-center border rounded-lg" />
+                        <input type="number" value={resultC} onChange={e => setResultC(e.target.value)} placeholder="Result 3" className="w-1/3 p-3 text-center border rounded-lg" />
+                    </div>
+                    <div className="flex flex-col space-y-4">
+                        <button onClick={handleSaveDraw} className="bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700 transition-colors">Save Draw</button>
+                        <button onClick={handleGenerateRandom} className="bg-yellow-500 text-white font-bold p-3 rounded-lg hover:bg-yellow-600 transition-colors">Generate Random</button>
+                        {saveStatus && <p className={`text-center text-sm ${saveStatus.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>{saveStatus}</p>}
+                    </div>
+                    <p onClick={handleExportCsv} className="text-center text-sm text-gray-500 cursor-pointer hover:underline mt-4">Export all history to CSV</p>
+                    <p onClick={() => setIsAuthenticated(false)} className="text-center text-sm text-red-500 cursor-pointer hover:underline">Logout</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default App;
