@@ -19,7 +19,7 @@
         const DRAW_END_HOUR = 21;
 
         let appState = {
-            status: 'LOADING',
+            status: 'LOADING', 
             message: '',
             isAuthenticated: false
         };
@@ -27,15 +27,25 @@
         window.onload = async () => {
             try {
                 updateUI();
-
-                const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                
+                let firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                 if (!firebaseConfigString) {
-                    throw new Error("Firebase configuration is missing.");
+                    throw new Error("Missing Firebase Configuration.");
                 }
 
-                const firebaseConfig = JSON.parse(firebaseConfigString);
+                let firebaseConfig;
+                try {
+                    firebaseConfig = JSON.parse(firebaseConfigString);
+                } catch (e) {
+                    throw new Error(`Invalid Firebase Configuration: ${e.message}`);
+                }
+
+                if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                    throw new Error("Empty Firebase Configuration.");
+                }
+
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
@@ -71,7 +81,7 @@
             } catch (e) {
                 console.error("Initialization failed:", e);
                 appState.status = 'ERROR';
-                appState.message = `A critical error occurred: ${e.message}. Please check the console for details.`;
+                appState.message = `Critical Error: ${e.message}`;
                 updateUI();
             }
         };
