@@ -6,13 +6,13 @@
     <title>Admon Lottery</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Changa+One:ital@0;1&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Base styles with a fresh, vibrant gradient */
+        /* Base styles with a fresh, vibrant radial gradient */
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #743ad5 0%, #d53a9d 100%);
+            background: radial-gradient(circle at top left, #ff007f 0%, #3a009d 100%);
             margin: 0;
             padding: 0;
             display: flex;
@@ -24,27 +24,27 @@
         /* Main container with frosted glass effect and subtle animation */
         .container {
             width: 100%;
-            max-width: 650px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(15px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
-            border-radius: 25px;
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            border-radius: 30px;
             overflow: hidden;
-            margin: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            margin: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
             position: relative;
             animation: fadeIn 1s ease-in-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         /* Tab styling for a modern, clean look */
         .tab-content {
             display: none;
-            padding: 30px;
+            padding: 40px;
         }
 
         .tab-content.active {
@@ -54,14 +54,15 @@
         .nav-tab {
             transition: all 0.3s ease-in-out;
             position: relative;
-            font-weight: 600;
+            font-weight: 700;
             z-index: 1;
+            font-size: 1.1rem;
         }
         
         .nav-tab.active {
-            color: #d53a9d;
+            color: #ff007f;
             background-color: #fff;
-            border-bottom: 3px solid #d53a9d;
+            border-bottom: 4px solid #ff007f;
         }
         
         .nav-tab:not(.active) {
@@ -71,33 +72,42 @@
 
         /* Lottery result boxes - the core of the app */
         .result-box {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #ff7e5f, #feb47b);
-            color: white;
-            width: 110px;
-            height: 110px;
+            font-family: 'Changa One', sans-serif;
+            font-size: 3.5rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #fceabb, #f8b500);
+            color: #333;
+            width: 140px;
+            height: 140px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease-in-out;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease-in-out, background 0.4s ease-in-out;
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.4);
+            animation: bounceIn 1s ease-out;
         }
         .result-box:hover {
-            transform: translateY(-8px) scale(1.08);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+            transform: translateY(-10px) scale(1.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            75% { transform: scale(0.9); }
+            100% { transform: scale(1); }
         }
 
         /* Loading spinner animation */
         .loading-spinner {
-            border: 4px solid #e5e7eb;
-            border-top: 4px solid #743ad5;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #ff007f;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             animation: spin 1s linear infinite;
             margin: auto;
         }
@@ -110,41 +120,41 @@
         /* Table and form element styling */
         .table-container {
             overflow-x: auto;
-            border-radius: 12px;
+            border-radius: 15px;
             border: 1px solid #d1d5db;
         }
         
         .button-primary {
-            background: #d53a9d;
+            background: linear-gradient(90deg, #ff6a00, #ee0979);
             color: white;
             font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            padding: 15px 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
         }
         .button-primary:hover {
-            background: #b63185;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(90deg, #ee0979, #ff6a00);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
         }
 
         .text-accent-pink {
-            color: #d53a9d;
+            color: #ff007f;
         }
         
         /* Real-time date and time display */
         #datetime {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #4b5563;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f2937;
             text-align: right;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             transition: color 0.3s;
         }
         @media (min-width: 768px) {
             #datetime {
-                font-size: 1.4rem;
+                font-size: 1.6rem;
             }
         }
     </style>
@@ -154,48 +164,48 @@
     <div class="container">
         <!-- Main Tabs -->
         <div class="flex border-b border-gray-200 bg-gray-50">
-            <button id="lottery-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="lottery-tab-content">Lottery</button>
-            <button id="history-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="history-tab-content">History</button>
-            <button id="admin-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="admin-tab-content">Admin Panel</button>
+            <button id="lottery-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="lottery-tab-content">Lottery</button>
+            <button id="history-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="history-tab-content">History</button>
+            <button id="admin-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="admin-tab-content">Admin Panel</button>
         </div>
 
         <!-- Lottery Tab Content -->
         <div id="lottery-tab-content" class="tab-content text-gray-800">
             <div id="datetime" class="font-semibold text-gray-600 text-right"></div>
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Today's Lottery Results</h2>
-            <div id="today-results-body" class="mb-6 min-h-[180px] flex items-center justify-center">
+            <h2 class="text-4xl font-bold text-center text-gray-900 mb-8">Today's Lottery Results</h2>
+            <div id="today-results-body" class="mb-6 min-h-[200px] flex items-center justify-center">
                 <div id="loading-spinner" class="loading-spinner"></div>
                 <div id="results-display" class="hidden">
                     <!-- Results will be dynamically inserted here -->
                 </div>
             </div>
 
-            <div class="text-center mt-8">
-                <span id="countdown" class="text-gray-500 text-lg md:text-2xl font-semibold"></span>
+            <div class="text-center mt-10">
+                <span id="countdown" class="text-gray-500 text-xl md:text-3xl font-semibold"></span>
             </div>
         </div>
 
         <!-- History Tab Content -->
         <div id="history-tab-content" class="tab-content text-gray-800">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Lottery History</h2>
-            <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-6">
-                <select id="year-filter" class="px-4 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+            <h2 class="text-4xl font-bold text-center text-gray-900 mb-8">Lottery History</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
+                <select id="year-filter" class="px-5 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
                     <!-- Year options will be dynamically inserted here -->
                 </select>
-                <input type="date" id="date-filter" class="px-4 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                <input type="date" id="date-filter" class="px-5 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
             </div>
 
             <div id="history-results" class="table-container">
                 <table class="min-w-full bg-white rounded-lg overflow-hidden">
                     <thead class="bg-gray-100 border-b border-gray-200">
                         <tr>
-                            <th class="px-4 py-2 text-left text-sm font-semibold text-gray-500">Time</th>
-                            <th class="px-4 py-2 text-left text-sm font-semibold text-gray-500">Draw</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-500">Time</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-500">Draw</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="2" class="p-4 text-center text-gray-500">Select a year or date to view history.</td>
+                            <td colspan="2" class="p-6 text-center text-gray-500">Select a year or date to view history.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -204,10 +214,10 @@
 
         <!-- Admin Panel Tab Content -->
         <div id="admin-tab-content" class="tab-content text-gray-800">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Admin Panel</h2>
+            <h2 class="text-4xl font-bold text-center text-gray-900 mb-8">Admin Panel</h2>
             <div id="login-form">
-                <p class="text-center text-sm text-gray-500 mb-4">Please enter the admin password to continue.</p>
-                <input type="password" id="admin-password" placeholder="Enter Password" class="w-full px-4 py-2 mb-4 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                <p class="text-center text-sm text-gray-500 mb-6">Please enter the admin password to continue.</p>
+                <input type="password" id="admin-password" placeholder="Enter Password" class="w-full px-5 py-3 mb-6 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
                 <button id="login-btn" class="w-full button-primary">Login</button>
                 <div id="login-status" class="mt-4 text-center text-red-500"></div>
             </div>
@@ -215,18 +225,18 @@
             <div id="admin-panel" class="hidden">
                 <p class="text-sm text-gray-500 mb-4">Enter the new lottery results below.</p>
                 <div class="flex flex-col space-y-4 mb-4">
-                    <input type="date" id="draw-date" class="px-4 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
-                    <input type="time" id="draw-time" class="px-4 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="date" id="draw-date" class="px-5 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="time" id="draw-time" class="px-5 py-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
                 </div>
                 <div class="flex space-x-2 md:space-x-4 mb-4">
-                    <input type="number" id="result-a-input" placeholder="Result 1" class="w-1/3 px-2 py-2 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
-                    <input type="number" id="result-b-input" placeholder="Result 2" class="w-1/3 px-2 py-2 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
-                    <input type="number" id="result-c-input" placeholder="Result 3" class="w-1/3 px-2 py-2 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="number" id="result-a-input" placeholder="Result 1" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="number" id="result-b-input" placeholder="Result 2" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="number" id="result-c-input" placeholder="Result 3" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
                 </div>
                 <button id="start-draw-btn" class="w-full button-primary bg-green-500 hover:bg-green-600">Save Draw</button>
-                <button id="random-results-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg mt-2 hover:bg-yellow-600 transition-colors duration-200">Generate Random</button>
-                <p id="save-status" class="text-center text-sm mt-2"></p>
-                <p id="export-btn" class="mt-4 text-blue-600 text-sm font-semibold cursor-pointer text-center hover:underline">Export all history to CSV</p>
+                <button id="random-results-btn" class="w-full bg-yellow-500 text-white font-bold py-4 px-4 rounded-lg mt-3 hover:bg-yellow-600 transition-colors duration-200">Generate Random</button>
+                <p id="save-status" class="text-center text-sm mt-3"></p>
+                <p id="export-btn" class="mt-6 text-blue-600 text-sm font-semibold cursor-pointer text-center hover:underline">Export all history to CSV</p>
                 <p id="logout-btn" class="mt-4 text-red-600 text-sm font-semibold cursor-pointer text-center hover:underline">Logout</p>
             </div>
         </div>
@@ -234,12 +244,12 @@
 
     <!-- Message box container -->
     <div id="message-box" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full border border-gray-200">
-            <h3 id="message-title" class="text-lg font-bold mb-2 text-gray-900"></h3>
-            <p id="message-text" class="text-gray-600 mb-4"></p>
-            <div class="flex justify-end space-x-2">
-                <button id="message-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-                <button id="message-confirm" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">OK</button>
+        <div class="bg-white p-8 rounded-xl shadow-xl max-w-sm w-full border border-gray-200">
+            <h3 id="message-title" class="text-xl font-bold mb-3 text-gray-900"></h3>
+            <p id="message-text" class="text-gray-600 mb-6"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="message-cancel" class="bg-gray-200 text-gray-700 px-5 py-3 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                <button id="message-confirm" class="bg-blue-500 text-white px-5 py-3 rounded-lg hover:bg-blue-600 transition-colors">OK</button>
             </div>
         </div>
     </div>
@@ -437,9 +447,9 @@
 
         function displayTodayResults(time, numbers) {
             let html = `
-                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 w-full md:w-auto transform transition-all duration-500 hover:scale-105">
-                    <p class="text-lg font-bold mb-4 text-gray-900 text-center">Last Draw (${time})</p>
-                    <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6">
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-200 w-full md:w-auto transform transition-all duration-500 hover:scale-105">
+                    <p class="text-xl font-bold mb-6 text-gray-900 text-center">Last Draw (${time})</p>
+                    <div class="flex flex-col md:flex-row justify-center items-center space-y-6 md:space-y-0 md:space-x-8">
                         <div class="flex flex-col items-center">
                             <span class="text-sm font-bold text-gray-500 mb-2">A</span>
                             <div class="result-box">
@@ -583,7 +593,7 @@
         });
 
         async function loadHistoryData() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">Loading history...</td></tr>';
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Loading history...</td></tr>';
             
             try {
                 const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
@@ -603,9 +613,9 @@
             } catch (error) {
                 console.error("Error fetching history data:", error);
                 if (error.code === 'permission-denied') {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
                 } else {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-red-500">Error loading history.</td></tr>`;
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
                 }
             }
         }
@@ -619,7 +629,7 @@
         }
 
         function filterHistory() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">Filtering history...</td></tr>';
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Filtering history...</td></tr>';
             
             const selectedDate = elements.dateFilter.value;
             const selectedYear = elements.yearFilter.value;
@@ -635,7 +645,7 @@
 
             let html = '';
             if (filteredDates.length === 0) {
-                html = `<tr><td colspan="2" class="p-4 text-center text-gray-500">No history found for this selection.</td></tr>`;
+                html = `<tr><td colspan="2" class="p-6 text-center text-gray-500">No history found for this selection.</td></tr>`;
             } else {
                 filteredDates.forEach(date => {
                     const draws = allHistoryData[date];
@@ -644,10 +654,10 @@
                         const numbers = draws[time];
                         html += `
                             <tr>
-                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">${time}</td>
-                                <td class="px-4 py-2">
-                                    <div class="flex space-x-2">
-                                        ${numbers.map(num => `<span class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-200 text-gray-800 text-sm font-bold">${num}</span>`).join('')}
+                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-800">${time}</td>
+                                <td class="px-6 py-3">
+                                    <div class="flex space-x-3">
+                                        ${numbers.map(num => `<span class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-200 text-gray-800 text-sm font-bold">${num}</span>`).join('')}
                                     </div>
                                 </td>
                             </tr>
