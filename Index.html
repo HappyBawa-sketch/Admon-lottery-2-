@@ -11,24 +11,26 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: #f3f4f6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Changed to flex-start for better mobile centering */
+            align-items: flex-start;
             min-height: 100vh;
         }
 
         .container {
             width: 100%;
             max-width: 600px;
-            background: #ffffff;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             border-radius: 20px;
             overflow: hidden;
             margin: 20px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
         }
 
         .tab-content {
@@ -40,40 +42,50 @@
             display: block;
         }
         
-        .nav-tab.active {
-            border-bottom-color: #3b82f6;
-            background: #f9fafb;
-            color: #1f2937;
+        .nav-tab {
+            transition: all 0.3s ease-in-out;
+            position: relative;
+            z-index: 1;
         }
-
+        
+        .nav-tab.active {
+            color: #3b82f6;
+            background-color: #fff;
+            border-bottom: 3px solid #3b82f6;
+        }
+        
         .nav-tab:not(.active) {
             color: #6b7280;
+            background-color: #f3f4f6;
         }
         
         .result-box {
-            font-size: 2.25rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            background: #f3f4f6;
-            color: #1f2937;
-            width: 96px;
-            height: 96px;
+            background: linear-gradient(45deg, #a78bfa, #818cf8);
+            color: white;
+            width: 100px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            border: 2px solid #e5e7eb;
+            border: 2px solid #a5b4fc;
+        }
+        .result-box span {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
 
         .result-box:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
         }
 
         .loading-spinner {
             border: 4px solid #e5e7eb;
-            border-top: 4px solid #3b82f6;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -110,6 +122,20 @@
         .text-accent-blue {
             color: #2563eb;
         }
+        
+        #datetime {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+            text-align: right;
+            margin-bottom: 1rem;
+            transition: color 0.3s;
+        }
+        @media (min-width: 768px) {
+            #datetime {
+                font-size: 1.25rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -117,15 +143,16 @@
     <div class="container">
         <!-- Main Tabs -->
         <div class="flex border-b border-gray-200 bg-gray-50">
-            <button id="lottery-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold transition-colors duration-200" data-tab="lottery-tab-content">Lottery</button>
-            <button id="history-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold transition-colors duration-200" data-tab="history-tab-content">History</button>
-            <button id="admin-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold transition-colors duration-200" data-tab="admin-tab-content">Admin Panel</button>
+            <button id="lottery-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="lottery-tab-content">Lottery</button>
+            <button id="history-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="history-tab-content">History</button>
+            <button id="admin-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="admin-tab-content">Admin Panel</button>
         </div>
 
         <!-- Lottery Tab Content -->
         <div id="lottery-tab-content" class="tab-content text-gray-800">
+            <div id="datetime" class="font-semibold text-gray-600 text-right"></div>
             <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Today's Lottery Results</h2>
-            <div id="today-results-body" class="mb-6">
+            <div id="today-results-body" class="mb-6 min-h-[150px] flex items-center justify-center">
                 <p id="loading-message" class="text-center text-gray-500 text-sm">Loading today's draws...</p>
                 <div id="results-display" class="hidden">
                     <!-- Results will be dynamically inserted here -->
@@ -232,6 +259,7 @@
         const DRAW_INTERVAL_MINUTES = 15;
 
         let countdownInterval;
+        let datetimeInterval;
         let allHistoryData = {};
         let isAuthenticated = false;
 
@@ -242,7 +270,7 @@
             historyTab: document.getElementById('history-tab'),
             adminTab: document.getElementById('admin-tab'),
             countdown: document.getElementById('countdown'),
-            currentDatetime: document.getElementById('current-datetime'),
+            datetimeDisplay: document.getElementById('datetime'),
             resultsDisplay: document.getElementById('results-display'),
             loadingMessage: document.getElementById('loading-message'),
             resultA: document.getElementById('result-a'),
@@ -343,6 +371,13 @@
             elements.countdown.textContent = `Next draw in: ${minutes}m ${seconds}s`;
         }
 
+        // Live Date and Time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            elements.datetimeDisplay.textContent = now.toLocaleDateString('en-US', options);
+        }
+        
         // Firebase Listeners
         async function startFirestoreListeners() {
             const today = new Date().toISOString().slice(0, 10);
@@ -376,17 +411,20 @@
                 unsubscribe();
             });
 
-            // Start countdown timer
+            // Start countdown timer and datetime display
             clearInterval(countdownInterval);
+            clearInterval(datetimeInterval);
             updateCountdown();
+            updateDateTime();
             countdownInterval = setInterval(updateCountdown, 1000);
+            datetimeInterval = setInterval(updateDateTime, 1000);
         }
 
         function displayTodayResults(time, numbers) {
             let html = `
-                <div class="bg-gray-50 p-6 rounded-xl shadow-md border border-gray-200">
-                    <p class="text-lg font-bold mb-4 text-gray-900">Last Draw (${time})</p>
-                    <div class="flex justify-center space-x-6">
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 w-full md:w-auto">
+                    <p class="text-lg font-bold mb-4 text-gray-900 text-center">Last Draw (${time})</p>
+                    <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6">
                         <div class="flex flex-col items-center">
                             <span class="text-sm font-bold text-gray-500 mb-2">A</span>
                             <div class="result-box">
