@@ -303,9 +303,9 @@
         // --- ADMIN PASSWORD (CHANGE THIS) ---
         const ADMIN_PASSWORD = "lottoditto";
 
-        // PASTE YOUR FIREBASE CONFIG HERE
+        // --- PASTE YOUR FIREBASE CONFIGURATION HERE ---
         const firebaseConfig = {
-            // const firebaseConfig = {  apiKey: "AIzaSyCiNCM2VsgI7PaxHg2W8rlORooMzm_WjVo",  authDomain: "my-lottery-app-5d538.firebaseapp.com",  projectId: "my-lottery-app-5d538",  storageBucket: "my-lottery-app-5d538.firebasestorage.app",  messagingSenderId: "603756737280",  appId: "1:603756737280:web:afc6f80372acbe05f739e5",  measurementId: "G-5722JH6SM8"};
+            // YOUR_FIREBASE_CONFIG_HERE
         };
 
         const app = initializeApp(firebaseConfig);
@@ -359,7 +359,7 @@
             elements.connectionStatus.textContent = "Connecting...";
             try {
                 await signInAnonymously(auth);
-                isAuthenticated = true; // Mark as authenticated for data access
+                isAuthenticated = true;
                 elements.connectionStatus.textContent = "Connected!";
                 elements.connectionStatus.classList.add('text-green-400');
                 listenForTodayDraws();
@@ -423,10 +423,14 @@
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
             
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            const tabButton = document.querySelector(`[data-tab-name="${tabName}"]`);
-            if (tabButton) {
-                tabButton.classList.add('active');
+            const targetTab = document.getElementById(`${tabName}-tab`);
+            const targetButton = document.querySelector(`[data-tab-name="${tabName}"]`);
+            
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            if (targetButton) {
+                targetButton.classList.add('active');
             }
         
             if (tabName === 'history') {
@@ -472,174 +476,4 @@
                     }
 
                     elements.todayResultsBody.innerHTML = '';
-                    sortedDraws.forEach(([time, result]) => {
-                        const row = `<tr><td>${time}</td><td>${result[0]}</td><td>${result[1]}</td><td>${result[2]}</td></tr>`;
-                        elements.todayResultsBody.innerHTML += row;
-                    });
-                } else {
-                    elements.todayResultsBody.innerHTML = '<tr><td colspan="4">No results for today yet.</td></tr>';
-                }
-            }, (error) => {
-                console.error("Error listening to draws:", error);
-                showMessage("Failed to load today's results.");
-            });
-        }
-        
-        async function setResults() {
-            const resultA = String(elements.resultAInput.value).padStart(2, '0');
-            const resultB = String(elements.resultBInput.value).padStart(2, '0');
-            const resultC = String(elements.resultCInput.value).padStart(2, '0');
-            const drawTime = elements.drawTimeInput.value;
-            const drawDate = elements.drawDateInput.value;
-
-            if (!resultA || !resultB || !resultC || !drawTime || !drawDate) {
-                showMessage('Please fill in all result and date/time fields!');
-                return;
-            }
-
-            const newDraw = [resultA, resultB, resultC];
-
-            try {
-                const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, drawDate);
-                await setDoc(docRef, {
-                    draws: { [drawTime]: newDraw }
-                }, { merge: true });
-                showMessage('Results set and saved successfully!');
-                elements.resultAInput.value = '';
-                elements.resultBInput.value = '';
-                elements.resultCInput.value = '';
-                elements.drawTimeInput.value = '';
-            } catch (error) {
-                console.error("Error saving results:", error);
-                showMessage('Error saving results: ' + error.message);
-            }
-        }
-        
-        function generateRandomResults() {
-            elements.resultAInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-            elements.resultBInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-            elements.resultCInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
-            elements.drawTimeInput.value = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'});
-        }
-
-        function startNewDraw() {
-            showMessage("Starting a new 15-minute countdown...");
-            clearInterval(countdownInterval);
-            let timeLeft = DRAW_INTERVAL_MINUTES * 60;
-            elements.countdown.textContent = `${String(DRAW_INTERVAL_MINUTES).padStart(2, '0')}:${String(0).padStart(2, '0')}`;
-
-            countdownInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft < 0) {
-                    clearInterval(countdownInterval);
-                    elements.countdown.textContent = "00:00";
-                    return;
-                }
-                const minutes = Math.floor(timeLeft / 60);
-                const seconds = timeLeft % 60;
-                elements.countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            }, 1000);
-        }
-
-        async function exportData() {
-            if (allHistoryData.length === 0) {
-                showMessage("No history data to export. Try loading history first.");
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Date,Time,A,B,C,Draw ID\r\n";
-
-            allHistoryData.forEach(row => {
-                let csvRow = `${row.date},${row.time},${row.a},${row.b},${row.c},${row.drawId}`;
-                csvContent += csvRow + "\r\n";
-            });
-
-            const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
-            link.setAttribute("download", "lottery_history.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showMessage("Data exported to CSV!");
-        }
-
-        async function loadHistoryTable() {
-            try {
-                const querySnapshot = await getDocs(collection(db, LOTTERY_RESULTS_COLLECTION));
-                allHistoryData = [];
-                const years = new Set();
-                const months = new Set();
-
-                querySnapshot.forEach(docSnap => {
-                    const docData = docSnap.data();
-                    const date = docSnap.id;
-                    years.add(new Date(date).getFullYear());
-                    months.add(new Date(date).getMonth() + 1);
-                    const draws = docData.draws || {};
-                    Object.entries(draws).forEach(([time, result]) => {
-                        allHistoryData.push({
-                            date: date,
-                            time: time,
-                            a: result[0],
-                            b: result[1],
-                            c: result[2],
-                            drawId: docSnap.id + '-' + time
-                        });
-                    });
-                });
-
-                allHistoryData.sort((a, b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime());
-                populateFilters(Array.from(years).sort(), Array.from(months).sort());
-                filterAndDisplayHistory();
-
-            } catch (error) {
-                console.error("Error fetching history:", error);
-                elements.historyTableBody.innerHTML = '<tr><td colspan="6">Failed to load history.</td></tr>';
-                showMessage("Failed to load history.");
-            }
-        }
-        
-        function populateFilters(years, months) {
-            elements.yearFilter.innerHTML = `<option value="">All Years</option>`;
-            years.forEach(year => {
-                elements.yearFilter.innerHTML += `<option value="${year}">${year}</option>`;
-            });
-
-            elements.monthFilter.innerHTML = `<option value="">All Months</option>`;
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            months.forEach(month => {
-                elements.monthFilter.innerHTML += `<option value="${String(month).padStart(2, '0')}">${monthNames[month - 1]}</option>`;
-            });
-        }
-        
-        function filterAndDisplayHistory() {
-            const year = elements.yearFilter.value;
-            const month = elements.monthFilter.value;
-
-            const filteredData = allHistoryData.filter(draw => {
-                const drawDate = new Date(draw.date);
-                const drawYear = drawDate.getFullYear();
-                const drawMonth = String(drawDate.getMonth() + 1).padStart(2, '0');
-                
-                const yearMatch = !year || drawYear == year;
-                const monthMatch = !month || drawMonth == month;
-                
-                return yearMatch && monthMatch;
-            });
-            
-            const tableBody = elements.historyTableBody;
-            tableBody.innerHTML = '';
-            
-            if (filteredData.length === 0) {
-                 tableBody.innerHTML = '<tr><td colspan="6">No results found for this filter.</td></tr>';
-            } else {
-                filteredData.forEach(draw => {
-                    const row = `<tr><td>${draw.date}</td><td>${draw.time}</td><td>${draw.a}</td><td>${draw.b}</td><td>${draw.c}</td><td>${draw.drawId}</td></tr>`;
-                    tableBody.innerHTML += row;
-                });
-            }
-        }
-    </script>
-</body>
-</html>
+                    sortedDraws.forEach(([t
