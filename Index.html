@@ -421,4 +421,360 @@
                     resolve(false);
                 };
                 elements.messageConfirm.addEventListener('click', onConfirm);
-                elemen
+                elements.messageCancel.addEventListener('click', onCancel);
+            });
+        }
+
+        // Helper function to get the current 15-minute draw time slot
+        function getDrawTimeSlot(date) {
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            if (hours < DRAW_START_HOUR || hours >= DRAW_END_HOUR) {
+                return null; // Outside of drawing hours
+            }
+            const nextDrawMinute = Math.floor(minutes / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
+            const drawTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, nextDrawMinute, 0);
+            return drawTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        // Countdown Timer
+        function updateCountdown() {
+            const now = new Date();
+            const currentHours = now.getHours();
+            
+            if (currentHours < DRAW_START_HOUR) {
+                elements.countdown.textContent = `Draws begin at 9:00 AM.`;
+                isDrawActive = false;
+                return;
+            } else if (currentHours >= DRAW_END_HOUR) {
+                elements.countdown.textContent = `Draws for today have ended.`;
+                isDrawActive = false;
+                return;
+            }
+
+            isDrawActive = true;
+            const currentMinutes = now.getMinutes();
+            const currentSeconds = now.getSeconds();
+            const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
+            const nextDrawTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextDrawMinute, 0);
+            
+            if (nextDrawTime.getHours() > DRAW_END_HOUR) {
+                 elements.countdown.textContent = `Draws for today have ended.`;
+                 isDrawActive = false;
+                 return;
+            }
+
+            const timeDiff = nextDrawTime.getTime() - now.getTime();
+            if (timeDiff <= 0) {
+                elements.countdown.textContent = `A new draw is happening now.`;
+                return;
+            }
+
+            const minutes = Math.floor(timeDiff / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+            elements.countdown.textContent = `Next draw in: ${minutes}m ${seconds}s`;
+        }
+
+        // Live Date and Time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            elements.datetimeDisplay.textContent = now.toLocaleDateString('en-US', options);
+        }
+        
+        // Firebase Listeners
+        async function startFirestoreListeners() {
+            const today = new Date().toISOString().slice(0, 10);
+            const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
+            
+            // Show loading spinner
+            elements.loadingSpinner.classList.remove('hidden');
+            elements.resultsDisplay.classList.add('hidden');
+            
+            const unsubscribe = onSnapshot(todayDocRef, (doc) => {
+                elements.loadingSpinner.classList.add('hidden');
+                elements.resultsDisplay.classList.remove('hidden');
+                
+                if (isDrawActive) {
+                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">Waiting for the next draw...</p>`;
+                }
+
+                if (doc.exists()) {
+                    const data = doc.data();
+                    const draws = data.draws;
+                    if (draws && Object.keys(draws).length > 0) {
+                        const now = new Date();
+                        const currentDrawTime = getDrawTimeSlot(now);
+                        if (currentDrawTime && draws[currentDrawTime]) {
+                             displayTodayResults(currentDrawTime, draws[currentDrawTime]);
+                        } else {
+                            const lastDrawTime = Object.keys(draws).sort().pop();
+                            const lastDrawNumbers = draws[lastDrawTime];
+                            displayTodayResults(lastDrawTime, lastDrawNumbers);
+                        }
+                    } else {
+                        elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
+                    }
+                } else {
+                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
+                }
+            }, (error) => {
+                console.error("Error fetching today's document:", error);
+                elements.loadingSpinner.classList.add('hidden');
+                if (error.code === 'permission-denied') {
+                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Connection failed. Please ensure your Firebase rules are public. <br><br> Go to Firebase Console > Firestore > Rules and set 'allow read, write: if true;' for the 'lottery-draws' collection.</p>`;
+                } else {
+                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Error connecting to database. Please check your internet connection.</p>`;
+                }
+                unsubscribe();
+            });
+
+            // Start countdown timer and datetime display
+            clearInterval(countdownInterval);
+            clearInterval(datetimeInterval);
+            updateCountdown();
+            updateDateTime();
+            countdownInterval = setInterval(updateCountdown, 1000);
+            datetimeInterval = setInterval(updateDateTime, 1000);
+        }
+
+        function displayTodayResults(time, numbers) {
+            elements.todayResultsBody.innerHTML = ''; // Clear previous results
+            const container = document.createElement('div');
+            container.classList.add('bg-gray-800', 'p-8', 'rounded-xl', 'shadow-xl', 'w-full', 'md:w-auto', 'transform', 'transition-all', 'duration-500');
+            container.innerHTML = `
+                <p class="text-xl font-bold mb-6 text-white text-center">Draw (${time})</p>
+                <div class="flex flex-col md:flex-row justify-center items-center space-y-6 md:space-y-0 md:space-x-8">
+                </div>
+            `;
+            elements.todayResultsBody.appendChild(container);
+            const numbersContainer = container.querySelector('div');
+
+            playDrawSound();
+            numbers.forEach((num, index) => {
+                setTimeout(() => {
+                    const numberBox = document.createElement('div');
+                    numberBox.classList.add('flex', 'flex-col', 'items-center');
+                    numberBox.innerHTML = `
+                        <span class="text-xl font-extrabold text-accent-pink mb-2">${String.fromCharCode(65 + index)}</span>
+                        <div class="result-box animating">
+                            <span>${num}</span>
+                        </div>
+                    `;
+                    numbersContainer.appendChild(numberBox);
+                }, index * 300); // 300ms delay for each number
+            });
+        }
+
+        // Admin Panel Functions
+        elements.loginBtn.addEventListener('click', () => {
+            if (elements.adminPasswordInput.value === ADMIN_PASSWORD) {
+                isAuthenticated = true;
+                elements.loginForm.classList.add('hidden');
+                elements.adminPanel.classList.remove('hidden');
+                elements.loginStatus.textContent = '';
+                setupAdminPanel();
+            } else {
+                elements.loginStatus.textContent = 'Incorrect password.';
+            }
+        });
+
+        elements.logoutBtn.addEventListener('click', () => {
+            isAuthenticated = false;
+            elements.loginForm.classList.remove('hidden');
+            elements.adminPanel.classList.add('hidden');
+            elements.adminPasswordInput.value = '';
+            elements.loginStatus.textContent = '';
+        });
+
+        elements.randomResultsBtn.addEventListener('click', () => {
+            const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
+            elements.resultAInput.value = randomNumbers[0];
+            elements.resultBInput.value = randomNumbers[1];
+            elements.resultCInput.value = randomNumbers[2];
+        });
+
+        elements.startDrawBtn.addEventListener('click', async () => {
+            if (!isAuthenticated) return;
+
+            const date = elements.drawDateInput.value;
+            const time = elements.drawTimeInput.value;
+            const resultA = elements.resultAInput.value;
+            const resultB = elements.resultBInput.value;
+            const resultC = elements.resultCInput.value;
+
+            if (!date || !time || !resultA || !resultB || !resultC) {
+                showMessageBox('Error', 'Please fill in all fields.');
+                return;
+            }
+
+            const confirm = await showMessageBox('Confirm Save', `Are you sure you want to save the draw for ${date} at ${time}?`, true);
+            if (!confirm) return;
+
+            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, date);
+            
+            try {
+                const docSnap = await getDoc(docRef);
+                const drawData = {
+                    [time]: [resultA, resultB, resultC]
+                };
+
+                if (docSnap.exists()) {
+                    await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
+                } else {
+                    await setDoc(docRef, { draws: drawData });
+                }
+                elements.saveStatus.textContent = 'Draw saved successfully!';
+                elements.saveStatus.classList.add('text-green-500');
+                elements.saveStatus.classList.remove('text-red-500');
+            } catch (error) {
+                console.error("Error saving draw:", error);
+                elements.saveStatus.textContent = 'Error saving draw.';
+                elements.saveStatus.classList.add('text-red-500');
+                elements.saveStatus.classList.remove('text-green-500');
+            }
+        });
+        
+        elements.exportBtn.addEventListener('click', async () => {
+            elements.saveStatus.textContent = 'Exporting...';
+            elements.saveStatus.classList.add('text-gray-400');
+            elements.saveStatus.classList.remove('text-green-500', 'text-red-500');
+            
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                
+                let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
+                querySnapshot.forEach((doc) => {
+                    const date = doc.id;
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        const draws = data.draws;
+                        Object.keys(draws).sort().forEach(time => {
+                            const numbers = draws[time];
+                            csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
+                        });
+                    }
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "lottery-history.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                elements.saveStatus.textContent = 'Export successful!';
+                elements.saveStatus.classList.add('text-green-500');
+                elements.saveStatus.classList.remove('text-red-500');
+                
+            } catch (error) {
+                console.error("Error exporting data:", error);
+                elements.saveStatus.textContent = 'Export failed.';
+                elements.saveStatus.classList.add('text-red-500');
+                elements.saveStatus.classList.remove('text-green-500');
+            }
+        });
+
+        // History Tab Functions
+        elements.dateFilter.addEventListener('change', (e) => filterHistory());
+        elements.yearFilter.addEventListener('change', (e) => {
+            elements.dateFilter.value = ''; // Reset date filter
+            filterHistory();
+        });
+
+        async function loadHistoryData() {
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Loading history...</td></tr>';
+            
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                allHistoryData = {};
+                const years = new Set();
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        allHistoryData[doc.id] = data.draws;
+                        years.add(doc.id.substring(0, 4));
+                    }
+                });
+                
+                populateYearFilter(Array.from(years).sort().reverse());
+                filterHistory();
+            } catch (error) {
+                console.error("Error fetching history data:", error);
+                if (error.code === 'permission-denied') {
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
+                } else {
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
+                }
+            }
+        }
+
+        function populateYearFilter(years) {
+            let optionsHtml = '<option value="">All Years</option>';
+            years.forEach(year => {
+                optionsHtml += `<option value="${year}">${year}</option>`;
+            });
+            elements.yearFilter.innerHTML = optionsHtml;
+        }
+
+        function filterHistory() {
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Filtering history...</td></tr>';
+            
+            const selectedDate = elements.dateFilter.value;
+            const selectedYear = elements.yearFilter.value;
+
+            let filteredDates = Object.keys(allHistoryData).sort().reverse();
+            
+            if (selectedYear) {
+                filteredDates = filteredDates.filter(date => date.startsWith(selectedYear));
+            }
+            if (selectedDate) {
+                filteredDates = filteredDates.filter(date => date === selectedDate);
+            }
+
+            let html = '';
+            if (filteredDates.length === 0) {
+                html = `<tr><td colspan="2" class="p-6 text-center text-gray-500">No history found for this selection.</td></tr>`;
+            } else {
+                filteredDates.forEach(date => {
+                    const draws = allHistoryData[date];
+                    const times = Object.keys(draws).sort();
+                    times.forEach(time => {
+                        const numbers = draws[time];
+                        html += `
+                            <tr>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-400">${time}</td>
+                                <td class="px-6 py-3">
+                                    <div class="flex space-x-3">
+                                        ${numbers.map(num => `<span class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-gray-200 text-sm font-bold">${num}</span>`).join('')}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+            }
+            elements.historyTableBody.innerHTML = html;
+        }
+
+        // Set up the current date and time in the admin panel
+        function setupAdminPanel() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            elements.drawDateInput.value = `${year}-${month}-${day}`;
+            elements.drawTimeInput.value = `${hours}:${minutes}`;
+        }
+        
+        // Initial setup
+        startFirestoreListeners();
+    </script>
+</body>
+</html>
