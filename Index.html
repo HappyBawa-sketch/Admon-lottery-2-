@@ -50,32 +50,25 @@
             color: #6b7280;
         }
         
-        .lottery-number {
-            font-size: 2.5rem;
+        .result-box {
+            font-size: 2.25rem;
             font-weight: 700;
-            background: #fff;
-            color: #3b82f6;
-            width: 80px;
-            height: 80px;
+            background: #f3f4f6;
+            color: #1f2937;
+            width: 96px;
+            height: 96px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            background: radial-gradient(circle at 70% 30%, #a5b4fc, #3b82f6);
-            color: white;
-            animation: pulse 1s infinite alternate;
-        }
-        
-        .lottery-number:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border: 2px solid #e5e7eb;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.05); }
+        .result-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
 
         .loading-spinner {
@@ -392,8 +385,25 @@
             let html = `
                 <div class="bg-gray-50 p-6 rounded-xl shadow-md border border-gray-200">
                     <p class="text-lg font-bold mb-4 text-gray-900">Last Draw (${time})</p>
-                    <div class="flex justify-center space-x-4">
-                        ${numbers.map(num => `<span class="lottery-number">${num}</span>`).join('')}
+                    <div class="flex justify-center space-x-6">
+                        <div class="flex flex-col items-center">
+                            <span class="text-sm font-bold text-gray-500 mb-2">A</span>
+                            <div class="result-box">
+                                <span>${numbers[0]}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-sm font-bold text-gray-500 mb-2">B</span>
+                            <div class="result-box">
+                                <span>${numbers[1]}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-sm font-bold text-gray-500 mb-2">C</span>
+                            <div class="result-box">
+                                <span>${numbers[2]}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -403,4 +413,212 @@
         // Admin Panel Functions
         elements.loginBtn.addEventListener('click', () => {
             if (elements.adminPasswordInput.value === ADMIN_PASSWORD) {
-                isAuthenticated = true
+                isAuthenticated = true;
+                elements.loginForm.classList.add('hidden');
+                elements.adminPanel.classList.remove('hidden');
+                elements.loginStatus.textContent = '';
+                setupAdminPanel();
+            } else {
+                elements.loginStatus.textContent = 'Incorrect password.';
+            }
+        });
+
+        elements.logoutBtn.addEventListener('click', () => {
+            isAuthenticated = false;
+            elements.loginForm.classList.remove('hidden');
+            elements.adminPanel.classList.add('hidden');
+            elements.adminPasswordInput.value = '';
+            elements.loginStatus.textContent = '';
+        });
+
+        elements.randomResultsBtn.addEventListener('click', () => {
+            const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
+            elements.resultAInput.value = randomNumbers[0];
+            elements.resultBInput.value = randomNumbers[1];
+            elements.resultCInput.value = randomNumbers[2];
+        });
+
+        elements.startDrawBtn.addEventListener('click', async () => {
+            if (!isAuthenticated) return;
+
+            const date = elements.drawDateInput.value;
+            const time = elements.drawTimeInput.value;
+            const resultA = elements.resultAInput.value;
+            const resultB = elements.resultBInput.value;
+            const resultC = elements.resultCInput.value;
+
+            if (!date || !time || !resultA || !resultB || !resultC) {
+                showMessageBox('Error', 'Please fill in all fields.');
+                return;
+            }
+
+            const confirm = await showMessageBox('Confirm Save', `Are you sure you want to save the draw for ${date} at ${time}?`, true);
+            if (!confirm) return;
+
+            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, date);
+            
+            try {
+                const docSnap = await getDoc(docRef);
+                const drawData = {
+                    [time]: [resultA, resultB, resultC]
+                };
+
+                if (docSnap.exists()) {
+                    await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
+                } else {
+                    await setDoc(docRef, { draws: drawData });
+                }
+                elements.saveStatus.textContent = 'Draw saved successfully!';
+                elements.saveStatus.classList.add('text-green-500');
+                elements.saveStatus.classList.remove('text-red-500');
+            } catch (error) {
+                console.error("Error saving draw:", error);
+                elements.saveStatus.textContent = 'Error saving draw.';
+                elements.saveStatus.classList.add('text-red-500');
+                elements.saveStatus.classList.remove('text-green-500');
+            }
+        });
+        
+        elements.exportBtn.addEventListener('click', async () => {
+            elements.saveStatus.textContent = 'Exporting...';
+            elements.saveStatus.classList.add('text-gray-400');
+            elements.saveStatus.classList.remove('text-green-500', 'text-red-500');
+            
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                
+                let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
+                querySnapshot.forEach((doc) => {
+                    const date = doc.id;
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        const draws = data.draws;
+                        Object.keys(draws).sort().forEach(time => {
+                            const numbers = draws[time];
+                            csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
+                        });
+                    }
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "lottery-history.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                elements.saveStatus.textContent = 'Export successful!';
+                elements.saveStatus.classList.add('text-green-500');
+                elements.saveStatus.classList.remove('text-red-500');
+                
+            } catch (error) {
+                console.error("Error exporting data:", error);
+                elements.saveStatus.textContent = 'Export failed.';
+                elements.saveStatus.classList.add('text-red-500');
+                elements.saveStatus.classList.remove('text-green-500');
+            }
+        });
+
+        // History Tab Functions
+        elements.dateFilter.addEventListener('change', (e) => filterHistory());
+        elements.yearFilter.addEventListener('change', (e) => {
+            elements.dateFilter.value = ''; // Reset date filter
+            filterHistory();
+        });
+
+        async function loadHistoryData() {
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">Loading history...</td></tr>';
+            
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                allHistoryData = {};
+                const years = new Set();
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        allHistoryData[doc.id] = data.draws;
+                        years.add(doc.id.substring(0, 4));
+                    }
+                });
+                
+                populateYearFilter(Array.from(years).sort().reverse());
+                filterHistory();
+            } catch (error) {
+                console.error("Error fetching history data:", error);
+                if (error.code === 'permission-denied') {
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
+                } else {
+                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-red-500">Error loading history.</td></tr>`;
+                }
+            }
+        }
+
+        function populateYearFilter(years) {
+            let optionsHtml = '<option value="">All Years</option>';
+            years.forEach(year => {
+                optionsHtml += `<option value="${year}">${year}</option>`;
+            });
+            elements.yearFilter.innerHTML = optionsHtml;
+        }
+
+        function filterHistory() {
+            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">Filtering history...</td></tr>';
+            
+            const selectedDate = elements.dateFilter.value;
+            const selectedYear = elements.yearFilter.value;
+
+            let filteredDates = Object.keys(allHistoryData).sort().reverse();
+            
+            if (selectedYear) {
+                filteredDates = filteredDates.filter(date => date.startsWith(selectedYear));
+            }
+            if (selectedDate) {
+                filteredDates = filteredDates.filter(date => date === selectedDate);
+            }
+
+            let html = '';
+            if (filteredDates.length === 0) {
+                html = `<tr><td colspan="2" class="p-4 text-center text-gray-500">No history found for this selection.</td></tr>`;
+            } else {
+                filteredDates.forEach(date => {
+                    const draws = allHistoryData[date];
+                    const times = Object.keys(draws).sort();
+                    times.forEach(time => {
+                        const numbers = draws[time];
+                        html += `
+                            <tr>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">${time}</td>
+                                <td class="px-4 py-2">
+                                    <div class="flex space-x-2">
+                                        ${numbers.map(num => `<span class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-200 text-gray-800 text-sm font-bold">${num}</span>`).join('')}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+            }
+            elements.historyTableBody.innerHTML = html;
+        }
+
+        // Set up the current date and time in the admin panel
+        function setupAdminPanel() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            elements.drawDateInput.value = `${year}-${month}-${day}`;
+            elements.drawTimeInput.value = `${hours}:${minutes}`;
+        }
+        
+        // Initial setup
+        startFirestoreListeners();
+    </script>
+</body>
+</html>
