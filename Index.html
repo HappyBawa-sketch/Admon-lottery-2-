@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admon Punjab Lottery</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Courier+Prime&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .header {
+            background: #0f0f23;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #ffd700;
+            width: 100%;
+        }
+        .header h1 {
+            color: #ffd700;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .nav-tabs {
+            display: flex;
+            background: #0f0f23;
+            border-bottom: 1px solid #333;
+            width: 100%;
+            justify-content: center;
+        }
+        .nav-tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: #ffd700;
+            color: #000;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .lottery-container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .lottery-title {
+            color: #ffd700;
+            font-size: 32px;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .subtitle { color: #ccc; margin-bottom: 20px; }
+        .datetime { color: #aaa; margin-bottom: 20px; }
+        .countdown {
+            font-size: 48px;
+            color: #ff4444;
+            font-family: 'Courier Prime', monospace;
+            margin: 30px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .betting-options {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+        }
+        .bet-box {
+            width: 80px;
+            height: 80px;
+            border: 3px solid #ffd700;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 215, 0, 0.1);
+            transition: all 0.3s;
+        }
+        .bet-letter {
+            color: #4dd0e1;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .bet-result {
+            color: #ffd700;
+            font-size: 18px;
+            margin-top: 5px;
+        }
+        
+        .admin-panel { max-width: 800px; margin: 0 auto; }
+        .admin-section { background: rgba(255, 255, 255, 0.1); margin: 20px 0; padding: 20px; border-radius: 10px; border: 1px solid #333; }
+        .admin-section h3 { color: #ffd700; margin-bottom: 15px; border-bottom: 2px solid #ffd700; padding-bottom: 10px; }
+        .form-group { margin: 15px 0; }
+        .form-group label { display: block; margin-bottom: 5px; color: #ccc; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #555; border-radius: 5px; background: #333; color: white; font-size: 16px; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        .btn { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s; margin: 5px; }
+        .btn-primary { background: #ffd700; color: #000; }
+        .btn-primary:hover { background: #ffed4e; }
+        .btn-danger { background: #ff4444; color: white; }
+        .btn-danger:hover { background: #ff6666; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.05); border-radius: 10px; overflow: hidden; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #333; }
+        th { background: #ffd700; color: #000; font-weight: bold; }
+        tr:hover { background: rgba(255, 215, 0, 0.1); }
+        .status-active { color: #4caf50; font-weight: bold; }
+        .status-completed { color: #ff9800; }
+        
+        .message-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ffd700;
+            color: #000;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background-color: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #ffd700;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs { flex-direction: column; }
+            .form-row { flex-direction: column; }
+            .lottery-title { font-size: 24px; }
+            .countdown { font-size: 36px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Admon Punjab Lottery</h1>
+    </div>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" data-tab-name="lottery">Lottery</button>
+        <button class="nav-tab" id="admin-login-tab">Admin Login</button>
+        <button class="nav-tab" data-tab-name="history">History</button>
+    </div>
+
+    <div id="lottery-tab" class="tab-content active">
+        <div class="lottery-container">
+            <h2 class="lottery-title">Admon Punjab Lottery</h2>
+            <p class="subtitle">15-Minute Draws • Live Results (9 AM - 9 PM)</p>
+            <p class="datetime" id="current-datetime"></p>
+            
+            <div class="countdown" id="countdown">--:--</div>
+            
+            <div class="betting-options">
+                <div class="bet-box">
+                    <div class="bet-letter">A</div>
+                    <div class="bet-result" id="result-a">--</div>
+                </div>
+                <div class="bet-box">
+                    <div class="bet-letter">B</div>
+                    <div class="bet-result" id="result-b">--</div>
+                </div>
+                <div class="bet-box">
+                    <div class="bet-letter">C</div>
+                    <div class="bet-result" id="result-c">--</div>
+                </div>
+            </div>
+            
+            <p class="text-xs mt-2 text-gray-400">Connection Status: <span id="connection-status" class="text-yellow-400">Initializing...</span></p>
+
+            <div class="table-container">
+                <h3>Today's Results</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-results-body">
+                        <tr><td colspan="4">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-tab" class="tab-content">
+        <div class="admin-panel">
+            <div class="admin-section">
+                <h3>Draw Management</h3>
+                <div class="form-row">
+                     <div class="form-group">
+                        <label>Draw Time</label>
+                        <input type="time" id="draw-time">
+                    </div>
+                    <div class="form-group">
+                        <label>Draw Date</label>
+                        <input type="date" id="draw-date">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Result A</label><input type="number" id="result-a-input" placeholder="00-99"></div>
+                    <div class="form-group"><label>Result B</label><input type="number" id="result-b-input" placeholder="00-99"></div>
+                    <div class="form-group"><label>Result C</label><input type="number" id="result-c-input" placeholder="00-99"></div>
+                </div>
+                <button class="btn btn-primary" id="set-results-btn">Set & Save Results</button>
+                <button class="btn btn-primary" id="random-results-btn">Generate Random Results</button>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Admin Control</h3>
+                <button class="btn btn-primary" id="start-draw-btn">Start New 15-Min Draw</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>Data Export</h3>
+                <button class="btn btn-primary" id="export-btn">Export All History to CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-tab" class="tab-content">
+        <div class="admin-panel">
+            <div class="admin-section">
+                <h3>Draw History</h3>
+                 <div class="form-row">
+                    <div class="form-group"><label>Filter by Year</label><select id="year-filter"></select></div>
+                    <div class="form-group"><label>Filter by Month</label><select id="month-filter"></select></div>
+                </div>
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                    <table class="w-full">
+                        <thead><tr><th>Date</th><th>Time</th><th>A</th><th>B</th><th>C</th><th>Draw ID</th></tr></thead>
+                        <tbody id="history-table-body"><tr><td colspan="6">Loading history...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="message-box" class="message-box"></div>
+
+    <div id="password-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">Admin Login</h3>
+            <p class="text-sm mb-4">Please enter the admin password to continue.</p>
+            <input type="password" id="admin-password-input" class="w-full p-2 mb-4 rounded bg-gray-700 text-white" placeholder="Enter password">
+            <button id="password-submit-btn" class="btn btn-primary w-full">Submit</button>
+            <p id="password-message" class="mt-2 text-sm text-red-400"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        
+        // --- ADMIN PASSWORD (CHANGE THIS) ---
+        const ADMIN_PASSWORD = "lottoditto";
+
+        // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {
+            // const firebaseConfig = {  apiKey: "AIzaSyCiNCM2VsgI7PaxHg2W8rlORooMzm_WjVo",  authDomain: "my-lottery-app-5d538.firebaseapp.com",  projectId: "my-lottery-app-5d538",  storageBucket: "my-lottery-app-5d538.firebasestorage.app",  messagingSenderId: "603756737280",  appId: "1:603756737280:web:afc6f80372acbe05f739e5",  measurementId: "G-5722JH6SM8"};
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const LOTTERY_RESULTS_COLLECTION = 'lottery-draws'; 
+        const DRAW_INTERVAL_MINUTES = 15;
+        
+        let countdownInterval;
+        let allHistoryData = [];
+        let isAuthenticated = false;
+        
+        const elements = {
+            tabs: document.querySelectorAll('.nav-tab'),
+            lotteryTab: document.getElementById('lottery-tab'),
+            adminTab: document.getElementById('admin-tab'),
+            historyTab: document.getElementById('history-tab'),
+            countdown: document.getElementById('countdown'),
+            currentDateTime: document.getElementById('current-datetime'),
+            resultA: document.getElementById('result-a'),
+            resultB: document.getElementById('result-b'),
+            resultC: document.getElementById('result-c'),
+            todayResultsBody: document.getElementById('today-results-body'),
+            drawTimeInput: document.getElementById('draw-time'),
+            drawDateInput: document.getElementById('draw-date'),
+            resultAInput: document.getElementById('result-a-input'),
+            resultBInput: document.getElementById('result-b-input'),
+            resultCInput: document.getElementById('result-c-input'),
+            setResultsBtn: document.getElementById('set-results-btn'),
+            randomResultsBtn: document.getElementById('random-results-btn'),
+            startDrawBtn: document.getElementById('start-draw-btn'),
+            exportBtn: document.getElementById('export-btn'),
+            yearFilter: document.getElementById('year-filter'),
+            monthFilter: document.getElementById('month-filter'),
+            historyTableBody: document.getElementById('history-table-body'),
+            messageBox: document.getElementById('message-box'),
+            connectionStatus: document.getElementById('connection-status'),
+            adminLoginTab: document.getElementById('admin-login-tab'),
+            passwordModal: document.getElementById('password-modal'),
+            passwordInput: document.getElementById('admin-password-input'),
+            passwordSubmitBtn: document.getElementById('password-submit-btn'),
+            passwordMessage: document.getElementById('password-message')
+        };
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+            setCurrentDateTime();
+            setCurrentDate();
+            
+            elements.connectionStatus.textContent = "Connecting...";
+            try {
+                await signInAnonymously(auth);
+                isAuthenticated = true; // Mark as authenticated for data access
+                elements.connectionStatus.textContent = "Connected!";
+                elements.connectionStatus.classList.add('text-green-400');
+                listenForTodayDraws();
+                loadHistoryTable();
+            } catch (e) {
+                console.error("Firebase connection failed:", e);
+                elements.connectionStatus.textContent = "Connection Failed.";
+                elements.connectionStatus.classList.add('text-red-400');
+            }
+        });
+        
+        function setupEventListeners() {
+            elements.tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tabName;
+                    showTab(tabName);
+                });
+            });
+
+            elements.adminLoginTab.addEventListener('click', () => {
+                elements.passwordModal.style.display = 'flex';
+                elements.passwordInput.focus();
+            });
+
+            elements.passwordSubmitBtn.addEventListener('click', handlePasswordSubmit);
+            elements.passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                }
+            });
+
+            elements.setResultsBtn.addEventListener('click', setResults);
+            elements.randomResultsBtn.addEventListener('click', generateRandomResults);
+            elements.startDrawBtn.addEventListener('click', startNewDraw);
+            elements.exportBtn.addEventListener('click', exportData);
+            elements.yearFilter.addEventListener('change', filterAndDisplayHistory);
+            elements.monthFilter.addEventListener('change', filterAndDisplayHistory);
+        }
+
+        function handlePasswordSubmit() {
+            const enteredPassword = elements.passwordInput.value;
+            if (enteredPassword === ADMIN_PASSWORD) {
+                elements.passwordModal.style.display = 'none';
+                elements.passwordMessage.textContent = '';
+                elements.adminLoginTab.style.display = 'none';
+                const adminTab = document.createElement('button');
+                adminTab.className = 'nav-tab';
+                adminTab.dataset.tabName = 'admin';
+                adminTab.textContent = 'Admin Panel';
+                elements.adminLoginTab.parentNode.insertBefore(adminTab, elements.adminLoginTab);
+                adminTab.addEventListener('click', () => showTab('admin'));
+                showTab('admin');
+                showMessage("Admin access granted.");
+            } else {
+                elements.passwordMessage.textContent = "Incorrect password. Please try again.";
+            }
+            elements.passwordInput.value = '';
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            const tabButton = document.querySelector(`[data-tab-name="${tabName}"]`);
+            if (tabButton) {
+                tabButton.classList.add('active');
+            }
+        
+            if (tabName === 'history') {
+                loadHistoryTable();
+            }
+        }
+
+        function showMessage(message) {
+            elements.messageBox.textContent = message;
+            elements.messageBox.style.display = 'block';
+            setTimeout(() => {
+                elements.messageBox.style.display = 'none';
+            }, 3000);
+        }
+
+        function setCurrentDateTime() {
+            setInterval(() => {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-GB');
+                const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                elements.currentDateTime.textContent = `${dateStr} | ${timeStr}`;
+            }, 1000);
+        }
+
+        function setCurrentDate() {
+            elements.drawDateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        function listenForTodayDraws() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, todayStr);
+
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const draws = docSnap.data().draws || {};
+                    const sortedDraws = Object.entries(draws).sort((a, b) => b[0].localeCompare(a[0]));
+                    
+                    if (sortedDraws.length > 0) {
+                        const lastDraw = sortedDraws[0][1];
+                        elements.resultA.textContent = lastDraw[0];
+                        elements.resultB.textContent = lastDraw[1];
+                        elements.resultC.textContent = lastDraw[2];
+                    }
+
+                    elements.todayResultsBody.innerHTML = '';
+                    sortedDraws.forEach(([time, result]) => {
+                        const row = `<tr><td>${time}</td><td>${result[0]}</td><td>${result[1]}</td><td>${result[2]}</td></tr>`;
+                        elements.todayResultsBody.innerHTML += row;
+                    });
+                } else {
+                    elements.todayResultsBody.innerHTML = '<tr><td colspan="4">No results for today yet.</td></tr>';
+                }
+            }, (error) => {
+                console.error("Error listening to draws:", error);
+                showMessage("Failed to load today's results.");
+            });
+        }
+        
+        async function setResults() {
+            const resultA = String(elements.resultAInput.value).padStart(2, '0');
+            const resultB = String(elements.resultBInput.value).padStart(2, '0');
+            const resultC = String(elements.resultCInput.value).padStart(2, '0');
+            const drawTime = elements.drawTimeInput.value;
+            const drawDate = elements.drawDateInput.value;
+
+            if (!resultA || !resultB || !resultC || !drawTime || !drawDate) {
+                showMessage('Please fill in all result and date/time fields!');
+                return;
+            }
+
+            const newDraw = [resultA, resultB, resultC];
+
+            try {
+                const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, drawDate);
+                await setDoc(docRef, {
+                    draws: { [drawTime]: newDraw }
+                }, { merge: true });
+                showMessage('Results set and saved successfully!');
+                elements.resultAInput.value = '';
+                elements.resultBInput.value = '';
+                elements.resultCInput.value = '';
+                elements.drawTimeInput.value = '';
+            } catch (error) {
+                console.error("Error saving results:", error);
+                showMessage('Error saving results: ' + error.message);
+            }
+        }
+        
+        function generateRandomResults() {
+            elements.resultAInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+            elements.resultBInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+            elements.resultCInput.value = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+            elements.drawTimeInput.value = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'});
+        }
+
+        function startNewDraw() {
+            showMessage("Starting a new 15-minute countdown...");
+            clearInterval(countdownInterval);
+            let timeLeft = DRAW_INTERVAL_MINUTES * 60;
+            elements.countdown.textContent = `${String(DRAW_INTERVAL_MINUTES).padStart(2, '0')}:${String(0).padStart(2, '0')}`;
+
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft < 0) {
+                    clearInterval(countdownInterval);
+                    elements.countdown.textContent = "00:00";
+                    return;
+                }
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                elements.countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        async function exportData() {
+            if (allHistoryData.length === 0) {
+                showMessage("No history data to export. Try loading history first.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Date,Time,A,B,C,Draw ID\r\n";
+
+            allHistoryData.forEach(row => {
+                let csvRow = `${row.date},${row.time},${row.a},${row.b},${row.c},${row.drawId}`;
+                csvContent += csvRow + "\r\n";
+            });
+
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", "lottery_history.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showMessage("Data exported to CSV!");
+        }
+
+        async function loadHistoryTable() {
+            try {
+                const querySnapshot = await getDocs(collection(db, LOTTERY_RESULTS_COLLECTION));
+                allHistoryData = [];
+                const years = new Set();
+                const months = new Set();
+
+                querySnapshot.forEach(docSnap => {
+                    const docData = docSnap.data();
+                    const date = docSnap.id;
+                    years.add(new Date(date).getFullYear());
+                    months.add(new Date(date).getMonth() + 1);
+                    const draws = docData.draws || {};
+                    Object.entries(draws).forEach(([time, result]) => {
+                        allHistoryData.push({
+                            date: date,
+                            time: time,
+                            a: result[0],
+                            b: result[1],
+                            c: result[2],
+                            drawId: docSnap.id + '-' + time
+                        });
+                    });
+                });
+
+                allHistoryData.sort((a, b) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime());
+                populateFilters(Array.from(years).sort(), Array.from(months).sort());
+                filterAndDisplayHistory();
+
+            } catch (error) {
+                console.error("Error fetching history:", error);
+                elements.historyTableBody.innerHTML = '<tr><td colspan="6">Failed to load history.</td></tr>';
+                showMessage("Failed to load history.");
+            }
+        }
+        
+        function populateFilters(years, months) {
+            elements.yearFilter.innerHTML = `<option value="">All Years</option>`;
+            years.forEach(year => {
+                elements.yearFilter.innerHTML += `<option value="${year}">${year}</option>`;
+            });
+
+            elements.monthFilter.innerHTML = `<option value="">All Months</option>`;
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            months.forEach(month => {
+                elements.monthFilter.innerHTML += `<option value="${String(month).padStart(2, '0')}">${monthNames[month - 1]}</option>`;
+            });
+        }
+        
+        function filterAndDisplayHistory() {
+            const year = elements.yearFilter.value;
+            const month = elements.monthFilter.value;
+
+            const filteredData = allHistoryData.filter(draw => {
+                const drawDate = new Date(draw.date);
+                const drawYear = drawDate.getFullYear();
+                const drawMonth = String(drawDate.getMonth() + 1).padStart(2, '0');
+                
+                const yearMatch = !year || drawYear == year;
+                const monthMatch = !month || drawMonth == month;
+                
+                return yearMatch && monthMatch;
+            });
+            
+            const tableBody = elements.historyTableBody;
+            tableBody.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                 tableBody.innerHTML = '<tr><td colspan="6">No results found for this filter.</td></tr>';
+            } else {
+                filteredData.forEach(draw => {
+                    const row = `<tr><td>${draw.date}</td><td>${draw.time}</td><td>${draw.a}</td><td>${draw.b}</td><td>${draw.c}</td><td>${draw.drawId}</td></tr>`;
+                    tableBody.innerHTML += row;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
