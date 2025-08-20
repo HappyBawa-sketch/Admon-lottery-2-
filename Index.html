@@ -6,40 +6,40 @@
     <title>Admon Lottery</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         /* Base styles with a deep, dramatic radial gradient */
         body {
-            font-family: 'Poppins', sans-serif;
-            background: radial-gradient(circle at center, #1a0a2a 0%, #0a0a1a 100%);
+            font-family: 'Montserrat', sans-serif;
+            background: radial-gradient(circle at center, #1a022a 0%, #08001a 100%);
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
-            color: #e2e8f0;
+            color: #f0f2f5;
         }
 
         /* Main container with sleek glass and glowing border */
         .container {
             width: 100%;
-            max-width: 700px;
-            background: rgba(30, 20, 50, 0.7);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 0 40px rgba(255, 0, 127, 0.2), 0 0 20px rgba(0, 255, 255, 0.2);
-            border-radius: 30px;
+            max-width: 800px;
+            background: rgba(25, 5, 50, 0.7);
+            backdrop-filter: blur(25px);
+            box-shadow: 0 0 50px rgba(255, 0, 127, 0.3), 0 0 30px rgba(100, 20, 255, 0.2);
+            border-radius: 40px;
             overflow: hidden;
             margin: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.1);
             position: relative;
             animation: fadeIn 1s ease-in-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(30px); }
+            from { opacity: 0; transform: translateY(50px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -54,66 +54,68 @@
         }
         
         .nav-tab {
-            transition: all 0.3s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
             position: relative;
             font-weight: 700;
             z-index: 1;
-            font-size: 1.1rem;
-            color: #94a3b8;
+            font-size: 1.2rem;
+            color: #a0aec0;
         }
         
         .nav-tab.active {
             color: #fff;
-            background-color: #331e4d;
-            border-bottom: 4px solid #ff007f;
-            text-shadow: 0 0 10px #ff007f;
+            background: #2b0b4d;
+            border-bottom: 5px solid #ff1493; /* Electric Pink */
+            text-shadow: 0 0 15px #ff1493;
+            transform: scale(1.05);
         }
         
         .nav-tab:not(.active) {
-            background-color: #1e122a;
+            background-color: #1e063a;
         }
 
         /* Lottery result balls - now with a sexy, glowing effect */
         .result-box {
-            font-family: 'Poppins', sans-serif;
-            font-size: 3.5rem;
-            font-weight: 800;
-            background: radial-gradient(circle, #f8c000 0%, #ee9617 100%);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            background: radial-gradient(circle, #ffc04d 0%, #ff8c00 100%); /* Fiery gradient */
             color: #333;
-            width: 140px;
-            height: 140px;
+            width: 160px;
+            height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%; /* Changed to a circle */
-            box-shadow: 0 0 15px rgba(255, 200, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.4);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease-in-out;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            animation: pulseGlow 2s infinite alternate;
+            border-radius: 50%; /* Circle */
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.8), 0 15px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55), box-shadow 0.4s ease-in-out;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            animation: pulseGlow 2.5s infinite alternate;
         }
         
         .result-box.animating {
-            animation: drawIn 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+            animation: drawIn 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
         }
         
         @keyframes drawIn {
-            from { transform: scale(0) rotate(180deg); opacity: 0; }
-            to { transform: scale(1) rotate(0deg); opacity: 1; }
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            80% { transform: scale(1.1) rotate(20deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
         
         @keyframes pulseGlow {
-            from { box-shadow: 0 0 10px rgba(255, 200, 0, 0.6), 0 5px 20px rgba(0, 0, 0, 0.4); }
-            to { box-shadow: 0 0 25px rgba(255, 200, 0, 1), 0 15px 40px rgba(0, 0, 0, 0.6); }
+            from { box-shadow: 0 0 15px rgba(255, 140, 0, 0.6), 0 10px 30px rgba(0, 0, 0, 0.4); }
+            to { box-shadow: 0 0 35px rgba(255, 140, 0, 1), 0 20px 50px rgba(0, 0, 0, 0.7); }
         }
         
         /* Loading spinner animation */
         .loading-spinner {
-            border: 5px solid rgba(255, 255, 255, 0.1);
-            border-top: 5px solid #ff007f;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-top: 6px solid #ff1493;
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             animation: spin 1s linear infinite;
             margin: auto;
         }
@@ -126,43 +128,61 @@
         /* Table and form element styling */
         .table-container {
             overflow-x: auto;
-            border-radius: 15px;
+            border-radius: 20px;
             border: 1px solid #3e2a5f;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
         
         .button-primary {
-            background: linear-gradient(90deg, #ff007f, #8a2be2);
+            background: linear-gradient(90deg, #ff1493, #8a2be2);
             color: white;
             font-weight: bold;
-            padding: 15px 30px;
-            border-radius: 12px;
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
+            padding: 18px 35px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            border: none;
+            cursor: pointer;
         }
         .button-primary:hover {
-            transform: translateY(-3px) scale(1.03);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px #ff1493;
         }
 
         .text-accent-pink {
-            color: #ff007f;
+            color: #ff1493;
         }
         
         /* Real-time date and time display with glowing effect */
         #datetime {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: #d1d5db;
             text-align: right;
             margin-bottom: 2rem;
             transition: color 0.3s;
-            text-shadow: 0 0 5px #fff;
+            text-shadow: 0 0 8px #ff1493;
         }
         @media (min-width: 768px) {
             #datetime {
-                font-size: 1.6rem;
+                font-size: 1.8rem;
             }
         }
+        
+        input, select {
+            background: #1e063a;
+            border: 1px solid #4a2d6b;
+            color: #f0f2f5;
+            padding: 12px 20px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #ff1493;
+            box-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
+        }
+
     </style>
 </head>
 <body>
@@ -170,31 +190,31 @@
     <div class="container">
         <!-- Main Tabs -->
         <div class="flex border-b border-gray-800 bg-gray-900">
-            <button id="lottery-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="lottery-tab-content">Lottery</button>
-            <button id="history-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="history-tab-content">History</button>
-            <button id="admin-tab" class="nav-tab flex-1 py-5 text-center text-sm md:text-base" data-tab="admin-tab-content">Admin Panel</button>
+            <button id="lottery-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="lottery-tab-content">Live Draw</button>
+            <button id="history-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="history-tab-content">History</button>
+            <button id="admin-tab" class="nav-tab flex-1 py-6 text-center text-base md:text-lg" data-tab="admin-tab-content">Admin</button>
         </div>
 
         <!-- Lottery Tab Content -->
         <div id="lottery-tab-content" class="tab-content text-gray-200">
             <div id="datetime" class="font-semibold text-gray-400 text-right"></div>
-            <h2 class="text-4xl font-bold text-center text-white mb-8">LIVE DRAW - Today's Winning Numbers!</h2>
-            <div id="today-results-body" class="mb-6 min-h-[200px] flex items-center justify-center">
+            <h2 class="text-5xl font-extrabold text-center text-white mb-10">LIVE DRAW</h2>
+            <div id="today-results-body" class="mb-8 min-h-[250px] flex items-center justify-center">
                 <div id="loading-spinner" class="loading-spinner"></div>
                 <div id="results-display" class="hidden">
                     <!-- Results will be dynamically inserted here -->
                 </div>
             </div>
 
-            <div class="text-center mt-10">
-                <span id="countdown" class="text-gray-400 text-xl md:text-3xl font-semibold"></span>
-                <button id="play-sound-btn" class="mt-4 button-primary hidden">Play Sound</button>
+            <div class="text-center mt-12">
+                <span id="countdown" class="text-gray-300 text-2xl md:text-4xl font-semibold"></span>
+                <button id="play-sound-btn" class="mt-6 button-primary hidden">Play Sound</button>
             </div>
         </div>
 
         <!-- History Tab Content -->
         <div id="history-tab-content" class="tab-content text-gray-200">
-            <h2 class="text-4xl font-bold text-center text-white mb-8">Lottery History</h2>
+            <h2 class="text-4xl font-extrabold text-center text-white mb-8">Lottery History</h2>
             <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
                 <select id="year-filter" class="px-5 py-3 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
                     <!-- Year options will be dynamically inserted here -->
@@ -221,7 +241,7 @@
 
         <!-- Admin Panel Tab Content -->
         <div id="admin-tab-content" class="tab-content text-gray-200">
-            <h2 class="text-4xl font-bold text-center text-white mb-8">Admin Panel</h2>
+            <h2 class="text-4xl font-extrabold text-center text-white mb-8">Admin Panel</h2>
             <div id="login-form">
                 <p class="text-center text-sm text-gray-400 mb-6">Please enter the admin password to continue.</p>
                 <input type="password" id="admin-password" placeholder="Enter Password" class="w-full px-5 py-3 mb-6 rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
@@ -240,7 +260,7 @@
                     <input type="number" id="result-b-input" placeholder="Result 2" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
                     <input type="number" id="result-c-input" placeholder="Result 3" class="w-1/3 px-3 py-3 text-center rounded-lg border border-gray-700 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow">
                 </div>
-                <button id="start-draw-btn" class="w-full button-primary bg-green-500 hover:bg-green-600">Save Draw</button>
+                <button id="start-draw-btn" class="w-full button-primary bg-green-600 hover:bg-green-700">Save Draw</button>
                 <button id="random-results-btn" class="w-full bg-yellow-500 text-white font-bold py-4 px-4 rounded-lg mt-3 hover:bg-yellow-600 transition-colors duration-200">Generate Random</button>
                 <p id="save-status" class="text-center text-sm mt-3"></p>
                 <p id="export-btn" class="mt-6 text-blue-400 text-sm font-semibold cursor-pointer text-center hover:underline">Export all history to CSV</p>
@@ -337,7 +357,7 @@
         
         // Sound effect for the draw
         const drawSound = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "square" },
+            oscillator: { type: "sine" },
             envelope: {
                 attack: 0.05,
                 decay: 0.2,
@@ -345,11 +365,11 @@
                 release: 0.5
             }
         }).toDestination();
-        const drawSoundNotes = ["C4", "E4", "G4", "C5"];
+        const drawSoundNotes = ["E4", "G4", "B4", "E5"]; // A more "winning" chord
 
         function playDrawSound() {
             try {
-                drawSound.triggerAttackRelease(drawSoundNotes, "8n");
+                drawSound.triggerAttackRelease(drawSoundNotes, "4n");
             } catch (e) {
                 console.warn("Audio playback failed:", e);
                 // The button will handle cases where auto-play is blocked
@@ -401,360 +421,4 @@
                     resolve(false);
                 };
                 elements.messageConfirm.addEventListener('click', onConfirm);
-                elements.messageCancel.addEventListener('click', onCancel);
-            });
-        }
-
-        // Helper function to get the current 15-minute draw time slot
-        function getDrawTimeSlot(date) {
-            const hours = date.getHours();
-            const minutes = date.getMinutes();
-            if (hours < DRAW_START_HOUR || hours >= DRAW_END_HOUR) {
-                return null; // Outside of drawing hours
-            }
-            const nextDrawMinute = Math.floor(minutes / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
-            const drawTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, nextDrawMinute, 0);
-            return drawTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }
-
-        // Countdown Timer
-        function updateCountdown() {
-            const now = new Date();
-            const currentHours = now.getHours();
-            
-            if (currentHours < DRAW_START_HOUR) {
-                elements.countdown.textContent = `Draws begin at 9:00 AM.`;
-                isDrawActive = false;
-                return;
-            } else if (currentHours >= DRAW_END_HOUR) {
-                elements.countdown.textContent = `Draws for today have ended.`;
-                isDrawActive = false;
-                return;
-            }
-
-            isDrawActive = true;
-            const currentMinutes = now.getMinutes();
-            const currentSeconds = now.getSeconds();
-            const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
-            const nextDrawTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextDrawMinute, 0);
-            
-            if (nextDrawTime.getHours() > DRAW_END_HOUR) {
-                 elements.countdown.textContent = `Draws for today have ended.`;
-                 isDrawActive = false;
-                 return;
-            }
-
-            const timeDiff = nextDrawTime.getTime() - now.getTime();
-            if (timeDiff <= 0) {
-                elements.countdown.textContent = `A new draw is happening now.`;
-                return;
-            }
-
-            const minutes = Math.floor(timeDiff / (1000 * 60));
-            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-            elements.countdown.textContent = `Next draw in: ${minutes}m ${seconds}s`;
-        }
-
-        // Live Date and Time
-        function updateDateTime() {
-            const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-            elements.datetimeDisplay.textContent = now.toLocaleDateString('en-US', options);
-        }
-        
-        // Firebase Listeners
-        async function startFirestoreListeners() {
-            const today = new Date().toISOString().slice(0, 10);
-            const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
-            
-            // Show loading spinner
-            elements.loadingSpinner.classList.remove('hidden');
-            elements.resultsDisplay.classList.add('hidden');
-            
-            const unsubscribe = onSnapshot(todayDocRef, (doc) => {
-                elements.loadingSpinner.classList.add('hidden');
-                elements.resultsDisplay.classList.remove('hidden');
-                
-                if (isDrawActive) {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">Waiting for the next draw...</p>`;
-                }
-
-                if (doc.exists()) {
-                    const data = doc.data();
-                    const draws = data.draws;
-                    if (draws && Object.keys(draws).length > 0) {
-                        const now = new Date();
-                        const currentDrawTime = getDrawTimeSlot(now);
-                        if (currentDrawTime && draws[currentDrawTime]) {
-                             displayTodayResults(currentDrawTime, draws[currentDrawTime]);
-                        } else {
-                            const lastDrawTime = Object.keys(draws).sort().pop();
-                            const lastDrawNumbers = draws[lastDrawTime];
-                            displayTodayResults(lastDrawTime, lastDrawNumbers);
-                        }
-                    } else {
-                        elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
-                    }
-                } else {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
-                }
-            }, (error) => {
-                console.error("Error fetching today's document:", error);
-                elements.loadingSpinner.classList.add('hidden');
-                if (error.code === 'permission-denied') {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Connection failed. Please ensure your Firebase rules are public. <br><br> Go to Firebase Console > Firestore > Rules and set 'allow read, write: if true;' for the 'lottery-draws' collection.</p>`;
-                } else {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Error connecting to database. Please check your internet connection.</p>`;
-                }
-                unsubscribe();
-            });
-
-            // Start countdown timer and datetime display
-            clearInterval(countdownInterval);
-            clearInterval(datetimeInterval);
-            updateCountdown();
-            updateDateTime();
-            countdownInterval = setInterval(updateCountdown, 1000);
-            datetimeInterval = setInterval(updateDateTime, 1000);
-        }
-
-        function displayTodayResults(time, numbers) {
-            elements.todayResultsBody.innerHTML = ''; // Clear previous results
-            const container = document.createElement('div');
-            container.classList.add('bg-gray-800', 'p-8', 'rounded-xl', 'shadow-xl', 'w-full', 'md:w-auto', 'transform', 'transition-all', 'duration-500');
-            container.innerHTML = `
-                <p class="text-xl font-bold mb-6 text-white text-center">Draw (${time})</p>
-                <div class="flex flex-col md:flex-row justify-center items-center space-y-6 md:space-y-0 md:space-x-8">
-                </div>
-            `;
-            elements.todayResultsBody.appendChild(container);
-            const numbersContainer = container.querySelector('div');
-
-            playDrawSound();
-            numbers.forEach((num, index) => {
-                setTimeout(() => {
-                    const numberBox = document.createElement('div');
-                    numberBox.classList.add('flex', 'flex-col', 'items-center');
-                    numberBox.innerHTML = `
-                        <span class="text-sm font-bold text-gray-400 mb-2">${String.fromCharCode(65 + index)}</span>
-                        <div class="result-box animating">
-                            <span>${num}</span>
-                        </div>
-                    `;
-                    numbersContainer.appendChild(numberBox);
-                }, index * 300); // 300ms delay for each number
-            });
-        }
-
-        // Admin Panel Functions
-        elements.loginBtn.addEventListener('click', () => {
-            if (elements.adminPasswordInput.value === ADMIN_PASSWORD) {
-                isAuthenticated = true;
-                elements.loginForm.classList.add('hidden');
-                elements.adminPanel.classList.remove('hidden');
-                elements.loginStatus.textContent = '';
-                setupAdminPanel();
-            } else {
-                elements.loginStatus.textContent = 'Incorrect password.';
-            }
-        });
-
-        elements.logoutBtn.addEventListener('click', () => {
-            isAuthenticated = false;
-            elements.loginForm.classList.remove('hidden');
-            elements.adminPanel.classList.add('hidden');
-            elements.adminPasswordInput.value = '';
-            elements.loginStatus.textContent = '';
-        });
-
-        elements.randomResultsBtn.addEventListener('click', () => {
-            const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
-            elements.resultAInput.value = randomNumbers[0];
-            elements.resultBInput.value = randomNumbers[1];
-            elements.resultCInput.value = randomNumbers[2];
-        });
-
-        elements.startDrawBtn.addEventListener('click', async () => {
-            if (!isAuthenticated) return;
-
-            const date = elements.drawDateInput.value;
-            const time = elements.drawTimeInput.value;
-            const resultA = elements.resultAInput.value;
-            const resultB = elements.resultBInput.value;
-            const resultC = elements.resultCInput.value;
-
-            if (!date || !time || !resultA || !resultB || !resultC) {
-                showMessageBox('Error', 'Please fill in all fields.');
-                return;
-            }
-
-            const confirm = await showMessageBox('Confirm Save', `Are you sure you want to save the draw for ${date} at ${time}?`, true);
-            if (!confirm) return;
-
-            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, date);
-            
-            try {
-                const docSnap = await getDoc(docRef);
-                const drawData = {
-                    [time]: [resultA, resultB, resultC]
-                };
-
-                if (docSnap.exists()) {
-                    await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
-                } else {
-                    await setDoc(docRef, { draws: drawData });
-                }
-                elements.saveStatus.textContent = 'Draw saved successfully!';
-                elements.saveStatus.classList.add('text-green-500');
-                elements.saveStatus.classList.remove('text-red-500');
-            } catch (error) {
-                console.error("Error saving draw:", error);
-                elements.saveStatus.textContent = 'Error saving draw.';
-                elements.saveStatus.classList.add('text-red-500');
-                elements.saveStatus.classList.remove('text-green-500');
-            }
-        });
-        
-        elements.exportBtn.addEventListener('click', async () => {
-            elements.saveStatus.textContent = 'Exporting...';
-            elements.saveStatus.classList.add('text-gray-400');
-            elements.saveStatus.classList.remove('text-green-500', 'text-red-500');
-            
-            try {
-                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
-                const querySnapshot = await getDocs(historyCollectionRef);
-                
-                let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
-                querySnapshot.forEach((doc) => {
-                    const date = doc.id;
-                    const data = doc.data();
-                    if (data && data.draws) {
-                        const draws = data.draws;
-                        Object.keys(draws).sort().forEach(time => {
-                            const numbers = draws[time];
-                            csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
-                        });
-                    }
-                });
-                
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "lottery-history.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                elements.saveStatus.textContent = 'Export successful!';
-                elements.saveStatus.classList.add('text-green-500');
-                elements.saveStatus.classList.remove('text-red-500');
-                
-            } catch (error) {
-                console.error("Error exporting data:", error);
-                elements.saveStatus.textContent = 'Export failed.';
-                elements.saveStatus.classList.add('text-red-500');
-                elements.saveStatus.classList.remove('text-green-500');
-            }
-        });
-
-        // History Tab Functions
-        elements.dateFilter.addEventListener('change', (e) => filterHistory());
-        elements.yearFilter.addEventListener('change', (e) => {
-            elements.dateFilter.value = ''; // Reset date filter
-            filterHistory();
-        });
-
-        async function loadHistoryData() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Loading history...</td></tr>';
-            
-            try {
-                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
-                const querySnapshot = await getDocs(historyCollectionRef);
-                allHistoryData = {};
-                const years = new Set();
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data && data.draws) {
-                        allHistoryData[doc.id] = data.draws;
-                        years.add(doc.id.substring(0, 4));
-                    }
-                });
-                
-                populateYearFilter(Array.from(years).sort().reverse());
-                filterHistory();
-            } catch (error) {
-                console.error("Error fetching history data:", error);
-                if (error.code === 'permission-denied') {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Connection failed. Please ensure your Firebase rules are public.</td></tr>`;
-                } else {
-                    elements.historyTableBody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
-                }
-            }
-        }
-
-        function populateYearFilter(years) {
-            let optionsHtml = '<option value="">All Years</option>';
-            years.forEach(year => {
-                optionsHtml += `<option value="${year}">${year}</option>`;
-            });
-            elements.yearFilter.innerHTML = optionsHtml;
-        }
-
-        function filterHistory() {
-            elements.historyTableBody.innerHTML = '<tr><td colspan="2" class="p-6 text-center text-gray-500">Filtering history...</td></tr>';
-            
-            const selectedDate = elements.dateFilter.value;
-            const selectedYear = elements.yearFilter.value;
-
-            let filteredDates = Object.keys(allHistoryData).sort().reverse();
-            
-            if (selectedYear) {
-                filteredDates = filteredDates.filter(date => date.startsWith(selectedYear));
-            }
-            if (selectedDate) {
-                filteredDates = filteredDates.filter(date => date === selectedDate);
-            }
-
-            let html = '';
-            if (filteredDates.length === 0) {
-                html = `<tr><td colspan="2" class="p-6 text-center text-gray-500">No history found for this selection.</td></tr>`;
-            } else {
-                filteredDates.forEach(date => {
-                    const draws = allHistoryData[date];
-                    const times = Object.keys(draws).sort();
-                    times.forEach(time => {
-                        const numbers = draws[time];
-                        html += `
-                            <tr>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-400">${time}</td>
-                                <td class="px-6 py-3">
-                                    <div class="flex space-x-3">
-                                        ${numbers.map(num => `<span class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-gray-200 text-sm font-bold">${num}</span>`).join('')}
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                });
-            }
-            elements.historyTableBody.innerHTML = html;
-        }
-
-        // Set up the current date and time in the admin panel
-        function setupAdminPanel() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            const day = now.getDate().toString().padStart(2, '0');
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            
-            elements.drawDateInput.value = `${year}-${month}-${day}`;
-            elements.drawTimeInput.value = `${hours}:${minutes}`;
-        }
-        
-        // Initial setup
-        startFirestoreListeners();
-    </script>
-</body>
-</html>
+                elemen
