@@ -6,73 +6,106 @@
     <title>Admon Lottery</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
-        // Import Firebase modules directly for a self-contained HTML file
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, updateDoc, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global variables for Firebase services
         let db;
         let auth;
-        let app;
-
-        // Configuration and constants
         const ADMIN_PASSWORD = "lottoditto";
         const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
         const DRAW_INTERVAL_MINUTES = 15;
-        const DRAW_START_HOUR = 9; // 9 AM
-        const DRAW_END_HOUR = 21;  // 9 PM
+        const DRAW_START_HOUR = 9;
+        const DRAW_END_HOUR = 21;
 
-        // --- Firebase and App Initialization ---
+        // Application state management.
+        let appState = {
+            status: 'LOADING', // States: 'LOADING', 'READY', 'ERROR'
+            message: '',
+            isAuthenticated: false
+        };
+
+        // --- Core Application Bootstrap ---
         window.onload = async () => {
             try {
-                // IMPORTANT: The following variables are provided by the canvas environment.
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // Display initial loading state
+                updateUI();
+
                 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
                 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                 if (!firebaseConfig) {
-                    displayMessage("Error: Firebase configuration is missing.", 'text-red-500');
-                    return;
+                    throw new Error("Firebase configuration is missing.");
                 }
 
                 // Initialize Firebase services
-                app = initializeApp(firebaseConfig);
+                const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Wait for the auth state to be ready before proceeding
-                const user = await new Promise(resolve => {
-                    const unsubscribe = onAuthStateChanged(auth, user => {
+                // Await authentication state to be ready
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
                         unsubscribe();
-                        resolve(user);
+                        if (user) {
+                            appState.isAuthenticated = true;
+                            resolve();
+                        } else {
+                            // Attempt custom token sign-in first, then anonymous
+                            try {
+                                if (initialAuthToken) {
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                } else {
+                                    await signInAnonymously(auth);
+                                }
+                                appState.isAuthenticated = true;
+                                resolve();
+                            } catch (e) {
+                                reject(new Error(`Authentication failed: ${e.message}`));
+                            }
+                        }
                     });
                 });
-                
-                // Attempt to sign in with the provided token. If it fails, sign in anonymously.
-                if (initialAuthToken) {
-                    try {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        console.log("Signed in with custom token.");
-                    } catch (e) {
-                        console.error("Failed to sign in with custom token, signing in anonymously.", e);
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
-                }
 
-                // Initialize UI and listeners after successful auth
+                // Set application state to ready and initialize UI
+                appState.status = 'READY';
                 initUIListeners();
                 updateLiveDraws();
                 setInterval(updateTime, 1000);
+                updateUI();
 
             } catch (e) {
                 console.error("Initialization failed:", e);
-                displayMessage(`A critical error occurred: ${e.message}`, 'text-red-500');
+                appState.status = 'ERROR';
+                appState.message = `A critical error occurred: ${e.message}. Please check the console for details.`;
+                updateUI();
             }
         };
+        
+        // --- UI Rendering Logic based on App State ---
+        function updateUI() {
+            const mainContent = document.getElementById('main-content');
+            const loadingScreen = document.getElementById('loading-screen');
+            const errorScreen = document.getElementById('error-screen');
+
+            loadingScreen.classList.add('hidden');
+            errorScreen.classList.add('hidden');
+            mainContent.classList.add('hidden');
+
+            switch (appState.status) {
+                case 'LOADING':
+                    loadingScreen.classList.remove('hidden');
+                    break;
+                case 'ERROR':
+                    errorScreen.classList.remove('hidden');
+                    document.getElementById('error-message').textContent = appState.message;
+                    break;
+                case 'READY':
+                    mainContent.classList.remove('hidden');
+                    showTab('lottery');
+                    break;
+            }
+        }
 
         // --- Core UI and Data Logic ---
         function initUIListeners() {
@@ -89,7 +122,6 @@
             document.getElementById('admin-logout-btn').addEventListener('click', handleAdminLogout);
         }
 
-        // --- Tab Switching Logic ---
         function showTab(tab) {
             const tabs = ['lottery', 'history', 'admin'];
             tabs.forEach(t => {
@@ -103,13 +135,12 @@
             document.getElementById(`${tab}-tab`).classList.remove('text-gray-600', 'hover:bg-gray-50');
         }
 
-        // --- Live Draw and Countdown ---
         function updateTime() {
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
             document.getElementById('current-time').textContent = now.toLocaleDateString('en-US', options);
-
             const currentHours = now.getHours();
+
             if (currentHours < DRAW_START_HOUR) {
                 document.getElementById('countdown-timer').textContent = `Draws begin at ${DRAW_START_HOUR}:00 AM.`;
             } else if (currentHours >= DRAW_END_HOUR) {
@@ -130,15 +161,12 @@
             }
         }
 
-        // Sets up a real-time Firestore listener for today's draws.
         function updateLiveDraws() {
             const today = new Date().toISOString().slice(0, 10);
             const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
             
             onSnapshot(todayDocRef, (docSnap) => {
                 const resultsContainer = document.getElementById('live-draw-results');
-                const loadingIndicator = document.getElementById('lottery-loading');
-                loadingIndicator.classList.add('hidden');
                 resultsContainer.innerHTML = '';
                 
                 if (docSnap.exists() && docSnap.data().draws) {
@@ -163,62 +191,61 @@
                 }
             }, (err) => {
                 console.error("Error fetching live data:", err);
-                document.getElementById('lottery-loading').classList.add('hidden');
                 document.getElementById('live-draw-results').innerHTML = `<p class="text-red-500 text-lg">Error loading live data. Please check your connection.</p>`;
             });
         }
 
-        // --- History Tab Logic ---
         async function loadHistory() {
             const historyTableBody = document.getElementById('history-table-body');
-            const loadingIndicator = document.getElementById('history-loading');
-            historyTableBody.innerHTML = '';
-            loadingIndicator.classList.remove('hidden');
+            historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">Loading history...</td></tr>`;
 
-            const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
-            const historyQuery = await getDocs(historyCollectionRef);
-            
-            loadingIndicator.classList.add('hidden');
-            if (historyQuery.empty) {
-                historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">No history found.</td></tr>`;
-                return;
-            }
-
-            let historyHtml = '';
-            const allDraws = [];
-            historyQuery.forEach(doc => {
-                const date = doc.id;
-                const data = doc.data();
-                if (data && data.draws) {
-                    Object.keys(data.draws).sort().forEach(time => {
-                        const numbers = data.draws[time];
-                        allDraws.push({ date, time, numbers });
-                    });
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const historyQuery = await getDocs(historyCollectionRef);
+                
+                if (historyQuery.empty) {
+                    historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">No history found.</td></tr>`;
+                    return;
                 }
-            });
 
-            // Sort draws by date and time in descending order
-            allDraws.sort((a, b) => {
-                if (b.date !== a.date) return b.date.localeCompare(a.date);
-                return b.time.localeCompare(a.time);
-            });
+                let historyHtml = '';
+                const allDraws = [];
+                historyQuery.forEach(doc => {
+                    const date = doc.id;
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        Object.keys(data.draws).sort().forEach(time => {
+                            const numbers = data.draws[time];
+                            allDraws.push({ date, time, numbers });
+                        });
+                    }
+                });
 
-            allDraws.forEach(draw => {
-                historyHtml += `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.date}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.time}</td>
-                        <td class="px-6 py-4">
-                            <div class="flex space-x-2">
-                                <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[0]}</span>
-                                <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[1]}</span>
-                                <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[2]}</span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            historyTableBody.innerHTML = historyHtml;
+                allDraws.sort((a, b) => {
+                    if (b.date !== a.date) return b.date.localeCompare(a.date);
+                    return b.time.localeCompare(a.time);
+                });
+
+                allDraws.forEach(draw => {
+                    historyHtml += `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.date}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.time}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex space-x-2">
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[0]}</span>
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[1]}</span>
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[2]}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                historyTableBody.innerHTML = historyHtml;
+            } catch (e) {
+                console.error("Error loading history:", e);
+                historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
+            }
         }
 
         // --- Admin Panel Logic ---
@@ -229,7 +256,6 @@
                 document.getElementById('admin-login-form').classList.add('hidden');
                 document.getElementById('admin-panel-content').classList.remove('hidden');
                 loginStatus.textContent = '';
-                // Set default date and time
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -280,10 +306,11 @@
                     await setDoc(docRef, { draws: drawData });
                 }
                 saveStatus.textContent = 'Draw saved successfully!';
-                setTimeout(() => saveStatus.textContent = '', 3000);
             } catch (e) {
                 console.error("Error saving draw:", e);
                 saveStatus.textContent = 'Error saving draw.';
+            } finally {
+                setTimeout(() => saveStatus.textContent = '', 3000);
             }
         }
 
@@ -319,16 +346,26 @@
                 setTimeout(() => exportStatus.textContent = '', 3000);
             }
         }
-        
-        function displayMessage(message, colorClass) {
-            const messageBox = document.getElementById('message-box');
-            messageBox.innerHTML = `<div class="${colorClass} text-center font-bold">${message}</div>`;
-        }
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 sm:p-8 flex justify-center items-start font-inter text-gray-800">
 
-    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-50">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-blue-500 h-12 w-12 mb-4 animate-spin"></div>
+        <div class="text-xl font-semibold text-gray-600">Loading Admon Lottery...</div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gray-100 z-50 hidden">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative text-center max-w-lg" role="alert">
+            <strong class="font-bold">Application Failure!</strong>
+            <p class="block sm:inline mt-2" id="error-message"></p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden hidden">
         
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 sm:p-10 text-center">
@@ -337,21 +374,17 @@
 
         <!-- Navigation Tabs -->
         <div class="flex bg-white border-b border-gray-200">
-            <button id="lottery-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200 border-b-4 border-indigo-500 bg-indigo-50 text-indigo-700">Live Draw</button>
-            <button id="history-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200 text-gray-600 hover:bg-gray-50">History</button>
-            <button id="admin-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200 text-gray-600 hover:bg-gray-50">Admin</button>
+            <button id="lottery-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200">Live Draw</button>
+            <button id="history-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200">History</button>
+            <button id="admin-tab" class="flex-1 p-4 text-center font-semibold text-lg transition-colors duration-200">Admin</button>
         </div>
 
-        <div id="message-box" class="p-4"></div>
-
-        <!-- Main Content -->
         <div class="p-8">
             
             <!-- Live Draw Tab Content -->
             <div id="lottery-content">
                 <div class="text-right text-gray-500 text-sm mb-4" id="current-time"></div>
                 <div class="text-center min-h-[200px] flex flex-col items-center justify-center">
-                    <div id="lottery-loading" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 animate-spin"></div>
                     <div id="live-draw-results"></div>
                 </div>
                 <div class="text-center mt-8">
@@ -362,9 +395,6 @@
             <!-- History Tab Content -->
             <div id="history-content" class="hidden">
                 <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">Lottery History</h2>
-                <div class="flex justify-center mb-4">
-                    <button onclick="loadHistory()" class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors">Refresh History</button>
-                </div>
                 <div class="bg-white shadow-lg rounded-lg overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -375,7 +405,6 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200" id="history-table-body">
-                            <tr><td colspan="3" class="p-6 text-center text-gray-400" id="history-loading">Loading history...</td></tr>
                         </tbody>
                     </table>
                 </div>
