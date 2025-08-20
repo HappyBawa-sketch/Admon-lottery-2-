@@ -200,7 +200,7 @@
             <div id="datetime" class="font-semibold text-gray-400 text-right"></div>
             <h2 class="text-5xl font-extrabold text-center text-white mb-10">LIVE DRAW</h2>
             <div id="today-results-body" class="mb-8 min-h-[250px] flex items-center justify-center">
-                <div id="initial-message" class="text-center text-gray-500 text-sm">Initializing...</div>
+                <div id="initial-message" class="text-center text-gray-500 text-sm">Initializing app...</div>
                 <div id="loading-spinner" class="loading-spinner hidden"></div>
                 <div id="results-display" class="hidden">
                     <!-- Results will be dynamically inserted here -->
@@ -291,12 +291,12 @@
         const ADMIN_PASSWORD = "lottoditto";
 
         // --- FIREBASE SETUP ---
-        // These variables are provided by the canvas environment and ensure your app works.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         let app, db, auth;
+        let authReady = false;
 
         // --- GLOBAL VARIABLES ---
         const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
@@ -308,7 +308,6 @@
         let datetimeInterval;
         let allHistoryData = {};
         let isAuthenticated = false;
-        let isDrawActive = false;
 
         // HTML Elements
         const elements = {
@@ -381,7 +380,7 @@
             document.getElementById(document.getElementById(tabId).dataset.tab).classList.add('active');
             
             // Special actions for each tab
-            if (tabId === 'history-tab') {
+            if (tabId === 'history-tab' && authReady) {
                 loadHistoryData();
             }
         }
@@ -436,15 +435,12 @@
             
             if (currentHours < DRAW_START_HOUR) {
                 elements.countdown.textContent = `Draws begin at 9:00 AM.`;
-                isDrawActive = false;
                 return;
             } else if (currentHours >= DRAW_END_HOUR) {
                 elements.countdown.textContent = `Draws for today have ended.`;
-                isDrawActive = false;
                 return;
             }
 
-            isDrawActive = true;
             const currentMinutes = now.getMinutes();
             const currentSeconds = now.getSeconds();
             const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
@@ -452,7 +448,6 @@
             
             if (nextDrawTime.getHours() > DRAW_END_HOUR) {
                  elements.countdown.textContent = `Draws for today have ended.`;
-                 isDrawActive = false;
                  return;
             }
 
@@ -479,7 +474,6 @@
             // Show loading spinner
             elements.initialMessage.classList.add('hidden');
             elements.loadingSpinner.classList.remove('hidden');
-            elements.resultsDisplay.classList.add('hidden');
             
             const today = new Date().toISOString().slice(0, 10);
             const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
@@ -488,47 +482,38 @@
                 elements.loadingSpinner.classList.add('hidden');
                 elements.resultsDisplay.classList.remove('hidden');
                 
-                if (isDrawActive) {
-                    elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">Waiting for the next draw...</p>`;
-                }
-
+                const now = new Date();
+                const currentHours = now.getHours();
+                
                 if (doc.exists()) {
                     const data = doc.data();
                     const draws = data.draws;
                     if (draws && Object.keys(draws).length > 0) {
-                        const now = new Date();
-                        const currentDrawTime = getDrawTimeSlot(now);
-                        if (currentDrawTime && draws[currentDrawTime]) {
-                             displayTodayResults(currentDrawTime, draws[currentDrawTime]);
-                        } else {
-                            const lastDrawTime = Object.keys(draws).sort().pop();
-                            const lastDrawNumbers = draws[lastDrawTime];
-                            displayTodayResults(lastDrawTime, lastDrawNumbers);
-                        }
+                        const lastDrawTime = Object.keys(draws).sort().pop();
+                        const lastDrawNumbers = draws[lastDrawTime];
+                        displayTodayResults(lastDrawTime, lastDrawNumbers);
                     } else {
                         elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
                     }
                 } else {
                     elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">No draws yet today. Stay tuned!</p>`;
                 }
+                
+                // If draw hours are over, stop the countdown
+                if (currentHours >= DRAW_END_HOUR) {
+                    clearInterval(countdownInterval);
+                    elements.countdown.textContent = `Draws for today have ended.`;
+                }
             }, (error) => {
                 console.error("Error fetching today's document:", error);
                 elements.loadingSpinner.classList.add('hidden');
+                elements.resultsDisplay.classList.add('hidden');
                 if (error.code === 'permission-denied') {
                     elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Connection failed. Please ensure your Firebase rules are public. <br><br> Go to Firebase Console > Firestore > Rules and set 'allow read, write: if true;' for the 'lottery-draws' collection.</p>`;
                 } else {
                     elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Error connecting to database. Please check your internet connection.</p>`;
                 }
-                unsubscribe();
             });
-
-            // Start countdown timer and datetime display
-            clearInterval(countdownInterval);
-            clearInterval(datetimeInterval);
-            updateCountdown();
-            updateDateTime();
-            countdownInterval = setInterval(updateCountdown, 1000);
-            datetimeInterval = setInterval(updateDateTime, 1000);
         }
 
         function displayTodayResults(time, numbers) {
@@ -772,24 +757,36 @@
                 // Check for required environment variables
                 if (!firebaseConfig || !initialAuthToken) {
                     console.error("Firebase environment variables are missing.");
-                    elements.todayResultsBody.innerHTML = `
-                        <p class="text-center text-red-500 text-sm">Initialization failed: Required Firebase settings are missing. Please ensure your environment is configured correctly.</p>
-                    `;
+                    elements.initialMessage.textContent = "Initialization failed: Firebase settings are missing.";
                     return;
                 }
+                
+                // Show initial message while everything loads
+                elements.initialMessage.classList.remove('hidden');
 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // Sign in with the provided token
+                // Sign in with the provided token and wait for it
                 await signInWithCustomToken(auth, initialAuthToken);
+                authReady = true;
                 console.log("Firebase signed in successfully.");
 
-                // Start listeners only after Firebase is ready
+                // Start listeners and app functionality only after Firebase is ready
                 startFirestoreListeners();
+                
+                // Start countdown timer and datetime display
+                clearInterval(countdownInterval);
+                clearInterval(datetimeInterval);
+                updateCountdown();
+                updateDateTime();
+                countdownInterval = setInterval(updateCountdown, 1000);
+                datetimeInterval = setInterval(updateDateTime, 1000);
+
             } catch (error) {
                 console.error("Failed to initialize Firebase:", error);
+                elements.initialMessage.classList.add('hidden');
                 elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Initialization failed: ${error.message}</p>`;
             }
         }
