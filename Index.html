@@ -6,12 +6,13 @@
     <title>Admon Lottery</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Base styles with a fresh, vibrant gradient */
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #743ad5 0%, #d53a9d 100%);
             margin: 0;
             padding: 0;
             display: flex;
@@ -20,22 +21,30 @@
             min-height: 100vh;
         }
 
+        /* Main container with frosted glass effect and subtle animation */
         .container {
             width: 100%;
-            max-width: 600px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
+            max-width: 650px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+            border-radius: 25px;
             overflow: hidden;
             margin: 20px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             position: relative;
+            animation: fadeIn 1s ease-in-out;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tab styling for a modern, clean look */
         .tab-content {
             display: none;
-            padding: 24px;
+            padding: 30px;
         }
 
         .tab-content.active {
@@ -45,50 +54,50 @@
         .nav-tab {
             transition: all 0.3s ease-in-out;
             position: relative;
+            font-weight: 600;
             z-index: 1;
         }
         
         .nav-tab.active {
-            color: #3b82f6;
+            color: #d53a9d;
             background-color: #fff;
-            border-bottom: 3px solid #3b82f6;
+            border-bottom: 3px solid #d53a9d;
         }
         
         .nav-tab:not(.active) {
-            color: #6b7280;
-            background-color: #f3f4f6;
+            color: #4b5563;
+            background-color: #e5e7eb;
         }
-        
+
+        /* Lottery result boxes - the core of the app */
         .result-box {
             font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(45deg, #a78bfa, #818cf8);
+            background: linear-gradient(45deg, #ff7e5f, #feb47b);
             color: white;
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 12px;
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            border: 2px solid #a5b4fc;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease-in-out;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-        .result-box span {
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }
-
         .result-box:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+            transform: translateY(-8px) scale(1.08);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
         }
 
+        /* Loading spinner animation */
         .loading-spinner {
             border: 4px solid #e5e7eb;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid #743ad5;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
             margin: auto;
         }
@@ -98,6 +107,7 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Table and form element styling */
         .table-container {
             overflow-x: auto;
             border-radius: 12px;
@@ -105,7 +115,7 @@
         }
         
         .button-primary {
-            background: #2563eb;
+            background: #d53a9d;
             color: white;
             font-weight: bold;
             padding: 12px 24px;
@@ -114,26 +124,27 @@
             transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
         }
         .button-primary:hover {
-            background: #3b82f6;
+            background: #b63185;
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .text-accent-blue {
-            color: #2563eb;
+        .text-accent-pink {
+            color: #d53a9d;
         }
         
+        /* Real-time date and time display */
         #datetime {
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #1f2937;
+            color: #4b5563;
             text-align: right;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             transition: color 0.3s;
         }
         @media (min-width: 768px) {
             #datetime {
-                font-size: 1.25rem;
+                font-size: 1.4rem;
             }
         }
     </style>
@@ -143,17 +154,17 @@
     <div class="container">
         <!-- Main Tabs -->
         <div class="flex border-b border-gray-200 bg-gray-50">
-            <button id="lottery-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="lottery-tab-content">Lottery</button>
-            <button id="history-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="history-tab-content">History</button>
-            <button id="admin-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base font-bold" data-tab="admin-tab-content">Admin Panel</button>
+            <button id="lottery-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="lottery-tab-content">Lottery</button>
+            <button id="history-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="history-tab-content">History</button>
+            <button id="admin-tab" class="nav-tab flex-1 py-4 text-center text-sm md:text-base" data-tab="admin-tab-content">Admin Panel</button>
         </div>
 
         <!-- Lottery Tab Content -->
         <div id="lottery-tab-content" class="tab-content text-gray-800">
             <div id="datetime" class="font-semibold text-gray-600 text-right"></div>
             <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Today's Lottery Results</h2>
-            <div id="today-results-body" class="mb-6 min-h-[150px] flex items-center justify-center">
-                <p id="loading-message" class="text-center text-gray-500 text-sm">Loading today's draws...</p>
+            <div id="today-results-body" class="mb-6 min-h-[180px] flex items-center justify-center">
+                <div id="loading-spinner" class="loading-spinner"></div>
                 <div id="results-display" class="hidden">
                     <!-- Results will be dynamically inserted here -->
                 </div>
@@ -272,7 +283,7 @@
             countdown: document.getElementById('countdown'),
             datetimeDisplay: document.getElementById('datetime'),
             resultsDisplay: document.getElementById('results-display'),
-            loadingMessage: document.getElementById('loading-message'),
+            loadingSpinner: document.getElementById('loading-spinner'),
             resultA: document.getElementById('result-a'),
             resultB: document.getElementById('result-b'),
             resultC: document.getElementById('result-c'),
@@ -383,11 +394,14 @@
             const today = new Date().toISOString().slice(0, 10);
             const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
             
-            // Loading state
-            elements.todayResultsBody.innerHTML = `<p class="text-center text-gray-500 text-sm">Loading today's draws...</p>`;
-
-            // Listen for today's results
+            // Show loading spinner
+            elements.loadingSpinner.classList.remove('hidden');
+            elements.resultsDisplay.classList.add('hidden');
+            
             const unsubscribe = onSnapshot(todayDocRef, (doc) => {
+                elements.loadingSpinner.classList.add('hidden');
+                elements.resultsDisplay.classList.remove('hidden');
+
                 if (doc.exists()) {
                     const data = doc.data();
                     const draws = data.draws;
@@ -403,6 +417,7 @@
                 }
             }, (error) => {
                 console.error("Error fetching today's document:", error);
+                elements.loadingSpinner.classList.add('hidden');
                 if (error.code === 'permission-denied') {
                     elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Connection failed. Please ensure your Firebase rules are public. <br><br> Go to Firebase Console > Firestore > Rules and set 'allow read, write: if true;' for the 'lottery-draws' collection.</p>`;
                 } else {
@@ -422,7 +437,7 @@
 
         function displayTodayResults(time, numbers) {
             let html = `
-                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 w-full md:w-auto">
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 w-full md:w-auto transform transition-all duration-500 hover:scale-105">
                     <p class="text-lg font-bold mb-4 text-gray-900 text-center">Last Draw (${time})</p>
                     <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6">
                         <div class="flex flex-col items-center">
