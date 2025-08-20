@@ -3,63 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Debugger</title>
+    <title>Admon Lottery</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
-        // Import Firebase functions needed for a minimal check
+        // Import necessary Firebase functions for Authentication and Firestore
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // This function will check the Firebase variables and display a message
+        // --- YOUR FIREBASE CONFIGURATION ---
+        // This is your unique key that allows the app to connect to your project.
+        // I have pre-filled this with the values you provided.
+        const firebaseConfig = {
+          apiKey: "AIzaSyBlPwjKdi3mkot-mTqSlcc86Ff1Ee-AFjg",
+          authDomain: "lotto-project-20-august.firebaseapp.com",
+          projectId: "lotto-project-20-august",
+          storageBucket: "lotto-project-20-august.firebasestorage.app",
+          messagingSenderId: "510379866293",
+          appId: "1:510379866293:web:ba3960d61693c32076e6fc",
+        };
+        // --- END OF FIREBASE CONFIG SECTION ---
+
+        // Global variables for Firebase services
+        let db;
+        let auth;
+
+        // Admin password for the simple admin login
+        const ADMIN_PASSWORD = "lottoditto";
+
+        // Constants for the lottery logic
+        const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
+        const DRAW_INTERVAL_MINUTES = 15;
+        const DRAW_START_HOUR = 9;
+        const DRAW_END_HOUR = 21;
+
+        // --- Firebase Initialization and Authentication ---
+        // This function runs as soon as the page loads.
         window.onload = async () => {
-            const statusDiv = document.getElementById('status-message');
-            const detailsDiv = document.getElementById('details');
-
             try {
-                // Check if the Firebase configuration is available
-                const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-                if (!firebaseConfigString) {
-                    throw new Error("Missing Firebase configuration variable (__firebase_config).");
-                }
-                
-                // Parse the config to ensure it's valid JSON
-                const firebaseConfig = JSON.parse(firebaseConfigString);
-                if (Object.keys(firebaseConfig).length === 0) {
-                     throw new Error("The Firebase configuration is empty.");
-                }
-
-                // Check if the authentication token is available
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                if (!initialAuthToken) {
-                    throw new Error("Missing authentication token variable (__initial_auth_token).");
-                }
-
-                // Try to initialize Firebase and authenticate
+                // Initialize Firebase app and services
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                await signInWithCustomToken(auth, initialAuthToken);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-                // If all checks pass, show success
-                statusDiv.textContent = 'SUCCESS!';
-                statusDiv.classList.remove('text-red-500', 'text-yellow-500');
-                statusDiv.classList.add('text-green-500');
-                detailsDiv.textContent = 'Firebase config and authentication token are available and working.';
+                // Sign in the user anonymously so they can access Firestore
+                await signInAnonymously(auth);
+                console.log("Signed in anonymously.");
 
-            } catch (error) {
-                // If any check fails, show the specific error message
-                statusDiv.textContent = 'FAILURE';
-                statusDiv.classList.remove('text-green-500');
-                statusDiv.classList.add('text-red-500');
-                detailsDiv.textContent = `Detailed Error: ${error.message}`;
+                // Once authenticated, attach UI listeners and start real-time updates
+                initUIListeners();
+                updateLiveDraws();
+                setInterval(updateTime, 1000);
+            } catch (e) {
+                console.error("Initialization failed:", e);
+                // Display a helpful error message to the user
+                document.body.innerHTML = `
+                  <div class="p-8 text-center text-red-500 font-bold">
+                    <p class="mb-4">Error: Application failed to load.</p>
+                    <p>Please check your Firebase configuration and security rules.</p>
+                    <p class="mt-2 text-sm text-gray-600">The app could not connect to your project. Double-check your Firebase console settings.</p>
+                  </div>
+                `;
             }
         };
+
+        // --- UI and Event Handling ---
+        function initUIListeners() {
+            // Tab switching logic
+            document.getElementById('lottery-tab').addEventListener('click', () => showTab('lottery'));
+            document.getElementById('history-tab').addEventListener('click', () => {
+                showTab('history');
+                loadHistory(); // Load history when the tab is clicked
+            });
+            document.getElementById('admin-tab').addEventListener('click', () => showTab('admin'));
+            
+            // Admin panel listeners
+            document.getElementById('admin-login-btn').addEventListener('click', handleAdminLogin);
+            document.getElementById('generate-random-btn').addEventListener('click', generateRandomNumbers);
+            document.getElementById('save-draw-btn').addEventListener('click', saveDraw);
+            document.getElementById('export-csv-btn').addEventListener('click', exportToCsv);
+            document.getElementById('admin-logout-btn').addEventListener('click', handleAdminLogout);
+        }
+
+        // Handles the display of the current time and countdown
+        function updateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('current-time').textContent = now.toLocaleDateString('en-US', options);
+
+            const currentHours = now.getHours();
+            if (currentHours < DRAW_START_HOUR) {
+                document.getElementById('countdown-timer').textContent = `Draws begin at ${DRAW_START_HOUR}:00 AM.`;
+            } else if (currentHours >= DRAW_END_HOUR) {
+                document.getElementById('countdown-timer').textContent = `Draws for today have ended.`;
+            } else {
+                const currentMinutes = now.getMinutes();
+                const nextDrawMinute = Math.ceil((currentMinutes + 1) / DRAW_INTERVAL_MINUTES) * DRAW_INTERVAL_MINUTES;
+                const nextDrawTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextDrawMinute, 0);
+                const timeDiff = nextDrawTime.getTime() - now.getTime();
+                
+                const minutes = Math.floor(timeDiff / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdown-timer').textContent = `Next draw in: ${minutes}m ${seconds}s`;
+            }
+        }
+
+        // Toggles between the different application tabs
+        function showTab(tab) {
+            const tabs = ['lottery', 'history', 'admin'];
+            tabs.forEach(t => {
+                document.getElementById(`${t}-content`).classList.add('hidden');
+                document.getElementById(`${t}-tab`).classList.remove('bg-blue-600', 'text-white');
+            });
+            document.getElementById(`${tab}-content`).classList.remove('hidden');
+            document.getElementById(`${tab}-tab`).classList.add('bg-blue-600', 'text-white');
+        }
+
+        // Fetches and displays the most recent lottery draw for today in real-time
+        function updateLiveDraws() {
+            const today = new Date().toISOString().slice(0, 10);
+            const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
+            
+            // Set up a real-time listener for the daily draw document
+            onSnapshot(todayDocRef, (docSnap) => {
+                const resultsContainer = document.getElementById('live-draw-results');
+                resultsContainer.innerHTML = ''; // Clear previous results
+                
+                if (docSnap.exists() && docSnap.data().draws) {
+                    const draws = docSnap.data().draws;
+                    // Get the latest draw by sorting the times
+                    const lastDrawTime = Object.keys(draws).sort().pop();
+                    const numbers = draws[lastDrawTime];
+                    
+                    if (numbers && numbers.length === 3) {
+                        resultsContainer.innerHTML = `
+                            <p class="text-gray-500 text-sm mb-2">Last draw at ${lastDrawTime}</p>
+                            <div class="flex justify-center items-center space-x-6">
+                                <div class="bg-blue-500 text-white font-bold text-3xl w-20 h-20 rounded-full flex items-center justify-center">${numbers[0]}</div>
+                                <div class="bg-blue-500 text-white font-bold text-3xl w-20 h-20 rounded-full flex items-center justify-center">${numbers[1]}</div>
+                                <div class="bg-blue-500 text-white font-bold text-3xl w-20 h-20 rounded-full flex items-center justify-center">${numbers[2]}</div>
+                            </div>
+                        `;
+                    } else {
+                        resultsContainer.innerHTML = `<p class="text-gray-400 text-lg">No draws for this date.</p>`;
+                    }
+                } else {
+                    resultsContainer.innerHTML = `<p class="text-gray-400 text-lg">No draws yet today. Stay tuned!</p>`;
+                }
+            }, (err) => {
+                console.error("Error fetching live data:", err);
+                document.getElementById('live-draw-results').innerHTML = `<p class="text-red-500 text-lg">Error loading live data. Please check your connection.</p>`;
+            });
+        }
+
+        // Fetches and displays the full history of lottery draws
+        async function loadHistory() {
+            const historyTableBody = document.getElementById('history-table-body');
+            historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">Loading history...</td></tr>`;
+
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                
+                if (querySnapshot.empty) {
+                    historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">No history found.</td></tr>`;
+                    return;
+                }
+
+                let historyHtml = '';
+                const allDraws = [];
+                // Iterate through all documents (dates) and their draws
+                querySnapshot.forEach(doc => {
+                    const date = doc.id;
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        Object.keys(data.draws).sort().forEach(time => {
+                            const numbers = data.draws[time];
+                            allDraws.push({ date, time, numbers });
+                        });
+                    }
+                });
+
+                // Sort all draws by date, then time
+                allDraws.sort((a, b) => {
+                    if (b.date !== a.date) return b.date.localeCompare(a.date);
+                    return b.time.localeCompare(a.time);
+                });
+
+                // Generate HTML for each draw
+                allDraws.forEach(draw => {
+                    historyHtml += `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.date}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${draw.time}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex space-x-2">
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[0]}</span>
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[1]}</span>
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold">${draw.numbers[2]}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                historyTableBody.innerHTML = historyHtml;
+            } catch (e) {
+                console.error("Error loading history:", e);
+                historyTableBody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-red-500">Error loading history.</td></tr>`;
+            }
+        }
+
+        // --- Admin Panel Logic ---
+        function handleAdminLogin() {
+            const passwordInput = document.getElementById('admin-password-input');
+            const loginStatus = document.getElementById('login-status');
+            if (passwordInput.value === ADMIN_PASSWORD) {
+                document.getElementById('admin-login-form').classList.add('hidden');
+                document.getElementById('admin-panel-content').classList.remove('hidden');
+                loginStatus.textContent = '';
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const day = now.getDate().toString().padStart(2, '0');
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                document.getElementById('draw-date-input').value = `${year}-${month}-${day}`;
+                document.getElementById('draw-time-input').value = `${hours}:${minutes}`;
+            } else {
+                loginStatus.textContent = 'Incorrect password.';
+            }
+        }
+
+        function handleAdminLogout() {
+            document.getElementById('admin-login-form').classList.remove('hidden');
+            document.getElementById('admin-panel-content').classList.add('hidden');
+            document.getElementById('admin-password-input').value = '';
+        }
+
+        function generateRandomNumbers() {
+            const randomNumbers = Array.from({length: 3}, () => Math.floor(Math.random() * 100).toString().padStart(2, '0'));
+            document.getElementById('result-a').value = randomNumbers[0];
+            document.getElementById('result-b').value = randomNumbers[1];
+            document.getElementById('result-c').value = randomNumbers[2];
+        }
+
+        async function saveDraw() {
+            const drawDate = document.getElementById('draw-date-input').value;
+            const drawTime = document.getElementById('draw-time-input').value;
+            const resultA = document.getElementById('result-a').value;
+            const resultB = document.getElementById('result-b').value;
+            const resultC = document.getElementById('result-c').value;
+            const saveStatus = document.getElementById('save-status');
+
+            if (!drawDate || !drawTime || !resultA || !resultB || !resultC) {
+                saveStatus.textContent = 'Please fill in all fields.';
+                return;
+            }
+
+            const docRef = doc(db, LOTTERY_RESULTS_COLLECTION, drawDate);
+            const drawData = { [drawTime]: [resultA, resultB, resultC] };
+
+            try {
+                // Use a transaction to ensure atomic update
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    await updateDoc(docRef, { draws: { ...docSnap.data().draws, ...drawData } });
+                } else {
+                    await setDoc(docRef, { draws: drawData });
+                }
+                saveStatus.textContent = 'Draw saved successfully!';
+            } catch (e) {
+                console.error("Error saving draw:", e);
+                saveStatus.textContent = 'Error saving draw.';
+            } finally {
+                setTimeout(() => saveStatus.textContent = '', 3000);
+            }
+        }
+
+        async function exportToCsv() {
+            const exportStatus = document.getElementById('save-status');
+            exportStatus.textContent = 'Exporting...';
+            try {
+                const historyCollectionRef = collection(db, LOTTERY_RESULTS_COLLECTION);
+                const querySnapshot = await getDocs(historyCollectionRef);
+                let csvContent = "data:text/csv;charset=utf-8,Date,Time,Result 1,Result 2,Result 3\n";
+                querySnapshot.forEach((doc) => {
+                    const date = doc.id;
+                    const data = doc.data();
+                    if (data && data.draws) {
+                        Object.keys(data.draws).sort().forEach(time => {
+                            const numbers = data.draws[time];
+                            csvContent += `${date},${time},${numbers[0]},${numbers[1]},${numbers[2]}\n`;
+                        });
+                    }
+                });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "lottery-history.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                exportStatus.textContent = 'Export successful!';
+            } catch (e) {
+                console.error("Error exporting data:", e);
+                exportStatus.textContent = 'Export failed.';
+            } finally {
+                setTimeout(() => exportStatus.textContent = '', 3000);
+            }
+        }
     </script>
 </head>
-<body class="bg-gray-100 p-8 flex flex-col items-center justify-center min-h-screen font-sans">
-    <div class="bg-white rounded-lg shadow-xl p-8 max-w-lg w-full text-center">
-        <h1 class="text-3xl font-bold mb-4">Firebase Status Check</h1>
-        <div class="text-4xl font-extrabold" id="status-message">LOADING...</div>
-        <p class="mt-4 text-gray-700" id="details">Checking Firebase configuration and authentication...</p>
+<body class="bg-gray-100 p-8 min-h-screen flex items-center justify-center font-sans text-gray-800">
+
+    <div class="w-full max-w-4xl bg-white rounded-lg shadow-xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-blue-500 text-white p-6 text-center">
+            <h1 class="text-3xl font-bold">ADMON LOTTERY</h1>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex bg-gray-200">
+            <button id="lottery-tab" class="flex-1 p-4 text-center font-semibold text-lg hover:bg-gray-300">Live Draw</button>
+            <button id="history-tab" class="flex-1 p-4 text-center font-semibold text-lg hover:bg-gray-300">History</button>
+            <button id="admin-tab" class="flex-1 p-4 text-center font-semibold text-lg hover:bg-gray-300">Admin</button>
+        </div>
+
+        <div class="p-8">
+            
+            <!-- Live Draw Tab Content -->
+            <div id="lottery-content">
+                <div class="text-right text-gray-500 text-sm mb-4" id="current-time"></div>
+                <div class="text-center min-h-[200px] flex flex-col items-center justify-center">
+                    <div id="live-draw-results"></div>
+                </div>
+                <div class="text-center mt-8">
+                    <p class="text-xl font-bold text-gray-600" id="countdown-timer"></p>
+                </div>
+            </div>
+
+            <!-- History Tab Content -->
+            <div id="history-content" class="hidden">
+                <h2 class="text-2xl font-bold text-center mb-4">Lottery History</h2>
+                <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Draw</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="history-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin Tab Content -->
+            <div id="admin-content" class="hidden">
+                <h2 class="text-2xl font-bold text-center mb-4">Admin Panel</h2>
+                <div id="admin-login-form" class="space-y-4 max-w-sm mx-auto">
+                    <input type="password" id="admin-password-input" placeholder="Enter Password" class="w-full p-2 border rounded-md" />
+                    <button id="admin-login-btn" class="w-full bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600">Login</button>
+                    <p id="login-status" class="mt-2 text-center text-red-500"></p>
+                </div>
+                <div id="admin-panel-content" class="hidden space-y-4">
+                    <div class="flex space-x-2">
+                        <input type="date" id="draw-date-input" class="w-1/2 p-2 border rounded-md" />
+                        <input type="time" id="draw-time-input" class="w-1/2 p-2 border rounded-md" />
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="number" id="result-a" placeholder="Result 1" class="w-1/3 p-2 text-center border rounded-md" />
+                        <input type="number" id="result-b" placeholder="Result 2" class="w-1/3 p-2 text-center border rounded-md" />
+                        <input type="number" id="result-c" placeholder="Result 3" class="w-1/3 p-2 text-center border rounded-md" />
+                    </div>
+                    <div class="flex flex-col space-y-2">
+                        <button id="save-draw-btn" class="bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600">Save Draw</button>
+                        <button id="generate-random-btn" class="bg-yellow-500 text-white font-bold p-2 rounded-md hover:bg-yellow-600">Generate Random</button>
+                        <p id="save-status" class="text-center text-sm"></p>
+                    </div>
+                    <p id="export-csv-btn" class="text-center text-sm text-gray-500 cursor-pointer hover:underline mt-4">Export all history to CSV</p>
+                    <p id="admin-logout-btn" class="text-center text-sm text-red-500 cursor-pointer hover:underline">Logout</p>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
