@@ -284,25 +284,20 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, onSnapshot, setDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- ADMIN PASSWORD (CHANGE THIS) ---
         const ADMIN_PASSWORD = "lottoditto";
 
-        // --- YOUR FIREBASE CONFIGURATION HERE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyC...",
-            authDomain: "admon-punjab-lottery.firebaseapp.com",
-            projectId: "admon-punjab-lottery",
-            storageBucket: "admon-punjab-lottery.appspot.com",
-            messagingSenderId: "1053580219610",
-            appId: "1:1053580219610:web:8ae6568245d635382c081e3"
-        };
+        // --- FIREBASE SETUP ---
+        // These variables are provided by the canvas environment and ensure your app works.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        let app, db, auth;
 
-        // Constants
+        // --- GLOBAL VARIABLES ---
         const LOTTERY_RESULTS_COLLECTION = 'lottery-draws';
         const DRAW_INTERVAL_MINUTES = 15;
         const DRAW_START_HOUR = 9; // 9 AM
@@ -324,16 +319,12 @@
             datetimeDisplay: document.getElementById('datetime'),
             resultsDisplay: document.getElementById('results-display'),
             loadingSpinner: document.getElementById('loading-spinner'),
-            resultA: document.getElementById('result-a'),
-            resultB: document.getElementById('result-b'),
-            resultC: document.getElementById('result-c'),
             todayResultsBody: document.getElementById('today-results-body'),
             drawDateInput: document.getElementById('draw-date'),
             drawTimeInput: document.getElementById('draw-time'),
             resultAInput: document.getElementById('result-a-input'),
             resultBInput: document.getElementById('result-b-input'),
             resultCInput: document.getElementById('result-c-input'),
-            saveResultsBtn: document.getElementById('save-results-btn'),
             startDrawBtn: document.getElementById('start-draw-btn'),
             randomResultsBtn: document.getElementById('random-results-btn'),
             historyTableBody: document.getElementById('history-table-body'),
@@ -372,7 +363,6 @@
                 drawSound.triggerAttackRelease(drawSoundNotes, "4n");
             } catch (e) {
                 console.warn("Audio playback failed:", e);
-                // The button will handle cases where auto-play is blocked
             }
         }
 
@@ -484,6 +474,12 @@
         
         // Firebase Listeners
         async function startFirestoreListeners() {
+            // Check if Firebase is initialized
+            if (!db) {
+                elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Error: Firebase is not configured correctly. Please check your document for setup instructions.</p>`;
+                return;
+            }
+            
             const today = new Date().toISOString().slice(0, 10);
             const todayDocRef = doc(db, LOTTERY_RESULTS_COLLECTION, today);
             
@@ -556,7 +552,7 @@
                     const numberBox = document.createElement('div');
                     numberBox.classList.add('flex', 'flex-col', 'items-center');
                     numberBox.innerHTML = `
-                        <span class="text-xl font-extrabold text-accent-pink mb-2">${String.fromCharCode(65 + index)}</span>
+                        <span class="text-2xl md:text-4xl font-extrabold text-accent-pink mb-2">${String.fromCharCode(65 + index)}</span>
                         <div class="result-box animating">
                             <span>${num}</span>
                         </div>
@@ -774,7 +770,33 @@
         }
         
         // Initial setup
-        startFirestoreListeners();
+        async function initializeApp() {
+            try {
+                if (!firebaseConfig) {
+                    throw new Error("Firebase configuration is missing.");
+                }
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in with the provided token
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Firebase signed in successfully.");
+                } else {
+                    console.warn("No authentication token provided. App may not work correctly.");
+                }
+
+                // Start listeners only after Firebase is ready
+                startFirestoreListeners();
+            } catch (error) {
+                console.error("Failed to initialize Firebase:", error);
+                elements.todayResultsBody.innerHTML = `<p class="text-center text-red-500 text-sm">Initialization failed: ${error.message}</p>`;
+            }
+        }
+
+        // Start the application
+        initializeApp();
     </script>
 </body>
 </html>
