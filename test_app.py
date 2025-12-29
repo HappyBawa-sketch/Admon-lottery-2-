@@ -13,7 +13,8 @@ class AppTestCase(unittest.TestCase):
     def test_home(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'YouTube Downloader', response.data)
+        # Check for the new title "Universal Downloader"
+        self.assertIn(b'Universal Downloader', response.data)
 
     def test_download_no_url(self):
         response = self.client.post('/download', data={}, follow_redirects=True)
