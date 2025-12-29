@@ -8,154 +8,268 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        body { font-family: 'Inter', sans-serif; }
         .loader {
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top: 3px solid #ffffff;
             width: 24px;
             height: 24px;
-            -webkit-animation: spin 1s linear infinite; /* Safari */
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex flex-col justify-between text-gray-800">
+<body class="bg-gray-900 min-h-screen flex flex-col justify-between text-white selection:bg-indigo-500 selection:text-white">
 
     <!-- Header -->
-    <header class="w-full p-6 flex justify-between items-center bg-white/10 backdrop-blur-md shadow-sm border-b border-white/20">
-        <div class="flex items-center space-x-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
-            </svg>
-            <span class="text-white text-xl font-bold tracking-tight">Universal Downloader</span>
+    <header class="w-full p-6 flex justify-between items-center border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center space-x-3 group cursor-pointer" onclick="window.location.reload()">
+            <div class="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            </div>
+            <span class="text-xl font-bold tracking-tight">Universal <span class="text-indigo-500">Downloader</span></span>
         </div>
-        <div>
-            <!-- Placeholder for potential future links -->
-            <a href="#" class="text-white/80 hover:text-white transition text-sm font-medium">Help</a>
-        </div>
+        <a href="#" class="text-gray-400 hover:text-white transition-colors text-sm font-medium">Help</a>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all duration-300 hover:shadow-3xl">
+    <main class="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
+        <!-- Background Blobs -->
+        <div class="absolute top-0 left-0 -ml-20 -mt-20 w-80 h-80 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-32 left-20 w-80 h-80 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
 
-            <div class="p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Download Video</h1>
-                    <p class="text-gray-500">Paste a link from YouTube, TikTok, Twitter/X, Instagram, etc.</p>
-                </div>
+        <div class="w-full max-w-2xl z-10">
 
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="mb-6 space-y-2">
-                            {% for message in messages %}
-                                <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md text-sm shadow-sm flex items-start" role="alert">
-                                    <svg class="h-5 w-5 text-red-500 mr-2 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                    <span class="block sm:inline">{{ message }}</span>
-                                </div>
-                            {% endfor %}
+            <div class="bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-700">
+                <div class="p-8 sm:p-10">
+
+                    <!-- Search State -->
+                    <div id="search-container" class="transition-all duration-300">
+                        <div class="text-center mb-10">
+                            <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Download Video & Audio</h1>
+                            <p class="text-gray-400 text-lg">Paste a link from YouTube, TikTok, Twitter, Instagram, or more.</p>
                         </div>
-                    {% endif %}
-                {% endwith %}
 
-                <form action="/download" method="POST" id="download-form" class="space-y-6">
-                    <div class="relative">
-                        <label for="url" class="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
-                        <div class="relative rounded-md shadow-sm">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
-                                </svg>
+                        <div class="relative group">
+                            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-200"></div>
+                            <div class="relative flex items-center">
+                                <input type="text" id="url-input"
+                                    placeholder="Paste URL here..."
+                                    class="block w-full bg-gray-900 border border-gray-700 text-white rounded-l-lg py-4 px-6 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500 text-lg transition-all"
+                                >
+                                <button id="analyze-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-8 rounded-r-lg transition-colors flex items-center whitespace-nowrap">
+                                    <span id="analyze-text">Start</span>
+                                    <div id="analyze-loader" class="loader ml-2 hidden" style="width: 20px; height: 20px; border-width: 2px;"></div>
+                                </button>
                             </div>
-                            <input type="text" name="url" id="url"
-                                placeholder="https://..." required
-                                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg p-3 border transition duration-150 ease-in-out">
                         </div>
+                        <p id="error-msg" class="text-red-400 text-sm mt-3 hidden text-center font-medium"></p>
                     </div>
 
-                    <button type="submit" id="submit-btn"
-                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                            <svg class="h-5 w-5 text-indigo-300 group-hover:text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    <!-- Result State -->
+                    <div id="result-container" class="hidden fade-in">
+                        <button id="back-btn" class="text-gray-400 hover:text-white mb-6 flex items-center text-sm font-medium transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                             </svg>
-                        </span>
-                        <span id="btn-text">Download Video</span>
-                        <div id="btn-loader" class="hidden absolute inset-0 flex items-center justify-center">
-                            <div class="loader"></div>
+                            Download another video
+                        </button>
+
+                        <div class="flex flex-col sm:flex-row gap-6 mb-8 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                            <img id="video-thumb" src="" alt="Thumbnail" class="w-full sm:w-48 rounded-lg object-cover shadow-lg aspect-video bg-gray-800">
+                            <div class="flex-1 flex flex-col justify-center">
+                                <h3 id="video-title" class="text-lg font-bold text-white line-clamp-2 mb-2"></h3>
+                                <div class="flex items-center text-sm text-gray-400 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span id="video-duration"></span>
+                                </div>
+                                <p id="video-author" class="text-sm text-indigo-400 font-medium"></p>
+                            </div>
                         </div>
-                    </button>
-                </form>
 
-                <div id="processing-msg" class="hidden mt-4 text-center">
-                    <p class="text-sm text-gray-500 animate-pulse">Processing video information...</p>
-                    <p class="text-xs text-gray-400 mt-1">This might take a few moments.</p>
-                </div>
+                        <form action="/download" method="POST" id="download-form">
+                            <input type="hidden" name="url" id="hidden-url">
 
-                <div class="mt-8 border-t border-gray-100 pt-6">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 text-center">Supported Platforms</p>
-                    <div class="flex justify-center space-x-6 text-gray-400">
-                        <i class="fab fa-youtube text-2xl hover:text-red-600 transition-colors" title="YouTube"></i>
-                        <i class="fab fa-facebook text-2xl hover:text-blue-600 transition-colors" title="Facebook"></i>
-                        <i class="fab fa-instagram text-2xl hover:text-pink-600 transition-colors" title="Instagram"></i>
-                        <i class="fab fa-twitter text-2xl hover:text-blue-400 transition-colors" title="Twitter/X"></i>
-                        <i class="fab fa-tiktok text-2xl hover:text-black transition-colors" title="TikTok"></i>
-                        <i class="fab fa-twitch text-2xl hover:text-purple-600 transition-colors" title="Twitch"></i>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                                <label class="cursor-pointer relative">
+                                    <input type="radio" name="type" value="video" checked class="peer sr-only">
+                                    <div class="p-4 rounded-xl border border-gray-700 bg-gray-900 peer-checked:border-indigo-500 peer-checked:bg-indigo-600/10 transition-all hover:bg-gray-800">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-semibold text-white">Video</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p class="text-sm text-gray-400">Best Quality (MP4/MKV)</p>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer relative">
+                                    <input type="radio" name="type" value="audio" class="peer sr-only">
+                                    <div class="p-4 rounded-xl border border-gray-700 bg-gray-900 peer-checked:border-indigo-500 peer-checked:bg-indigo-600/10 transition-all hover:bg-gray-800">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-semibold text-white">Audio</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p class="text-sm text-gray-400">Best Audio (M4A/WebM)</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <button type="submit" id="download-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all transform hover:scale-[1.02] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span>Download Now</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Platform Icons -->
+                    <div class="mt-12 pt-8 border-t border-gray-700">
+                        <div class="flex justify-center gap-6 sm:gap-8 flex-wrap opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                            <i class="fab fa-youtube text-3xl hover:text-red-500 transition-colors"></i>
+                            <i class="fab fa-facebook text-3xl hover:text-blue-500 transition-colors"></i>
+                            <i class="fab fa-instagram text-3xl hover:text-pink-500 transition-colors"></i>
+                            <i class="fab fa-twitter text-3xl hover:text-blue-400 transition-colors"></i>
+                            <i class="fab fa-tiktok text-3xl hover:text-white transition-colors"></i>
+                            <i class="fab fa-twitch text-3xl hover:text-purple-500 transition-colors"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 px-8 py-4 border-t border-gray-100 flex justify-center">
-                 <p class="text-xs text-gray-500">By using this tool, you agree to our Terms of Service.</p>
-            </div>
+
+            <p class="text-center text-gray-500 text-xs mt-6">&copy; 2025 Universal Downloader. By using this tool you agree to our Terms.</p>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="w-full p-4 text-center text-white/60 text-sm">
-        <p>&copy; 2025 Universal Downloader. All rights reserved.</p>
-    </footer>
-
     <script>
-        const form = document.getElementById('download-form');
-        const submitBtn = document.getElementById('submit-btn');
-        const btnText = document.getElementById('btn-text');
-        const btnLoader = document.getElementById('btn-loader');
-        const processingMsg = document.getElementById('processing-msg');
+        // DOM Elements
+        const urlInput = document.getElementById('url-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const analyzeText = document.getElementById('analyze-text');
+        const analyzeLoader = document.getElementById('analyze-loader');
+        const errorMsg = document.getElementById('error-msg');
 
-        form.addEventListener('submit', function() {
-            // Change button state
-            submitBtn.disabled = true;
-            submitBtn.classList.add('cursor-not-allowed', 'bg-indigo-400');
-            submitBtn.classList.remove('hover:bg-indigo-700');
+        const searchContainer = document.getElementById('search-container');
+        const resultContainer = document.getElementById('result-container');
+        const backBtn = document.getElementById('back-btn');
 
-            // Hide text, show loader
-            btnText.classList.add('opacity-0');
-            btnLoader.classList.remove('hidden');
+        // Result Elements
+        const videoTitle = document.getElementById('video-title');
+        const videoThumb = document.getElementById('video-thumb');
+        const videoDuration = document.getElementById('video-duration');
+        const videoAuthor = document.getElementById('video-author');
+        const hiddenUrl = document.getElementById('hidden-url');
 
-            // Show processing message
-            processingMsg.classList.remove('hidden');
+        const downloadForm = document.getElementById('download-form');
+        const downloadBtn = document.getElementById('download-btn');
 
-            // Reset UI after 15 seconds (giving time for server processing)
+        // Functions
+        const setLoading = (isLoading) => {
+            if (isLoading) {
+                analyzeBtn.disabled = true;
+                analyzeBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                analyzeText.classList.add('hidden');
+                analyzeLoader.classList.remove('hidden');
+            } else {
+                analyzeBtn.disabled = false;
+                analyzeBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                analyzeText.classList.remove('hidden');
+                analyzeLoader.classList.add('hidden');
+            }
+        };
+
+        const showError = (msg) => {
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hidden');
+            setTimeout(() => errorMsg.classList.add('hidden'), 5000);
+        };
+
+        const formatDuration = (seconds) => {
+            if (!seconds) return 'Unknown';
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        };
+
+        // Event Listeners
+        analyzeBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) return showError('Please enter a valid URL');
+
+            setLoading(true);
+            errorMsg.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.error || 'Failed to fetch video info');
+
+                // Populate Data
+                videoTitle.textContent = data.title;
+                videoThumb.src = data.thumbnail;
+                videoDuration.textContent = formatDuration(data.duration);
+                videoAuthor.textContent = data.uploader || 'Unknown Artist';
+                hiddenUrl.value = data.webpage_url || url;
+
+                // Switch View
+                searchContainer.classList.add('hidden');
+                resultContainer.classList.remove('hidden');
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Allow Enter key to trigger analyze
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeBtn.click();
+        });
+
+        backBtn.addEventListener('click', () => {
+            resultContainer.classList.add('hidden');
+            searchContainer.classList.remove('hidden');
+            urlInput.value = '';
+            urlInput.focus();
+        });
+
+        // Download button loading state (simple timeout reset)
+        downloadForm.addEventListener('submit', () => {
+            const originalBtnContent = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<div class="loader" style="width: 20px; height: 20px; border-width: 2px;"></div>';
+            downloadBtn.classList.add('cursor-not-allowed', 'opacity-75');
+
             setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('cursor-not-allowed', 'bg-indigo-400');
-                submitBtn.classList.add('hover:bg-indigo-700');
-
-                btnText.classList.remove('opacity-0');
-                btnText.innerText = "Download Video";
-                btnLoader.classList.add('hidden');
-
-                processingMsg.classList.add('hidden');
-            }, 15000);
+                downloadBtn.innerHTML = originalBtnContent;
+                downloadBtn.classList.remove('cursor-not-allowed', 'opacity-75');
+            }, 5000); // Reset after 5s just in case, though browser handles download
         });
     </script>
 </body>

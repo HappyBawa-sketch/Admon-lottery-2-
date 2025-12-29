@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, flash, redirect, url_for, after_this_request
+from flask import Flask, render_template, request, send_file, jsonify, after_this_request
 import yt_dlp
 import os
 import tempfile
@@ -15,30 +15,65 @@ logger = app.logger
 def index():
     return render_template('index.html')
 
+@app.route('/api/info', methods=['POST'])
+def get_video_info():
+    data = request.get_json()
+    url = data.get('url')
+    if not url:
+        return jsonify({'error': 'Please provide a URL'}), 400
+
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            logger.info(f"Fetching info for URL: {url}")
+            info = ydl.extract_info(url, download=False)
+
+            # Extract relevant info
+            video_data = {
+                'title': info.get('title'),
+                'thumbnail': info.get('thumbnail'),
+                'duration': info.get('duration'),
+                'uploader': info.get('uploader'),
+                'webpage_url': info.get('webpage_url'),
+                'formats': [] # Simplified for now, logic handled in download
+            }
+            return jsonify(video_data)
+
+    except Exception as e:
+        logger.error(f"Error fetching video info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/download', methods=['POST'])
 def download_video():
     url = request.form.get('url')
+    format_type = request.form.get('type', 'video') # 'video' or 'audio'
+
     if not url:
-        flash('Please provide a URL')
-        return redirect(url_for('index'))
+        return "URL is required", 400
 
     try:
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp()
 
         # yt-dlp options
-        # Since ffmpeg is not available, we should stick to formats that don't require merging if possible,
-        # or accept that some best formats might be video only or audio only.
-        # 'best' usually tries to find the best single file if ffmpeg is missing.
         ydl_opts = {
-            'format': 'best',
             'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
             'noplaylist': True,
             'quiet': True,
         }
 
+        # Configure format based on selection
+        if format_type == 'audio':
+            ydl_opts['format'] = 'bestaudio/best'
+        else:
+            # Default to best video+audio (single file if possible, else best)
+            ydl_opts['format'] = 'best'
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            logger.info(f"Downloading from URL: {url}")
+            logger.info(f"Downloading {format_type} from URL: {url}")
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
 
@@ -69,8 +104,7 @@ def download_video():
 
     except Exception as e:
         logger.error(f"Error downloading video: {str(e)}")
-        flash(f'Error downloading video: {str(e)}')
-        return redirect(url_for('index'))
+        return f"Error downloading video: {str(e)}", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
