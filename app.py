@@ -54,6 +54,7 @@ def download_video():
     if not url:
         return "URL is required", 400
 
+    temp_dir = None
     try:
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp()
@@ -104,6 +105,16 @@ def download_video():
 
     except Exception as e:
         logger.error(f"Error downloading video: {str(e)}")
+        # Clean up temp dir if it was created but request failed before after_this_request
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                # Remove all files in the directory
+                for f in os.listdir(temp_dir):
+                    os.remove(os.path.join(temp_dir, f))
+                os.rmdir(temp_dir)
+                logger.info("Cleaned up temp directory after error.")
+            except Exception as cleanup_error:
+                logger.error(f"Error cleaning up temp dir: {cleanup_error}")
         return f"Error downloading video: {str(e)}", 500
 
 if __name__ == '__main__':
